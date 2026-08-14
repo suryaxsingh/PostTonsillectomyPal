@@ -1,35 +1,1684 @@
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from "react";
+import {
+  Alert,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-// You can import supported modules from npm
-import { Card } from 'react-native-paper';
+const MEDICINES = [
+  {
+    id: "paracetamol",
+    name: "Paracetamol / Panadol",
+    shortName: "Panadol",
+    type: "liquid",
+    mgPerKg: 15,
+    maxSingleDoseMg: 1000,
+    maxDosesIn24Hours: 4,
+    intervalHours: 6,
+    note: "Use only if included in your child’s discharge instructions.",
+    strengthOptions: [
+      { id: "para120", label: "120 mg / 5 mL", mgPerMl: 24 },
+      { id: "para250", label: "250 mg / 5 mL", mgPerMl: 50 },
+      { id: "unknown", label: "Other / not sure", mgPerMl: null },
+    ],
+  },
+  {
+    id: "ibuprofen",
+    name: "Ibuprofen / Nurofen",
+    shortName: "Nurofen",
+    type: "liquid",
+    mgPerKg: 10,
+    maxSingleDoseMg: 400,
+    maxDosesIn24Hours: 3,
+    intervalHours: 8,
+    note: "Use only if included in your child’s discharge instructions.",
+    strengthOptions: [
+      { id: "ibu100", label: "100 mg / 5 mL", mgPerMl: 20 },
+      { id: "ibu200", label: "200 mg / 5 mL", mgPerMl: 40 },
+      { id: "unknown", label: "Other / not sure", mgPerMl: null },
+    ],
+  },
+  {
+    id: "celecoxib",
+    name: "Celecoxib",
+    shortName: "Celecoxib",
+    type: "prescription",
+    maxDosesIn24Hours: 2,
+    intervalHours: 12,
+    note: "Only give if specifically prescribed. Follow the prescription label.",
+  },
+  {
+    id: "dexamethasone",
+    name: "Dexamethasone",
+    shortName: "Dexamethasone",
+    type: "prescription",
+    maxDosesIn24Hours: 1,
+    intervalHours: 24,
+    note: "Only give if specifically prescribed. Follow the prescription label.",
+  },
+  {
+  id: "oxycodone",
+  name: "Oxycodone",
+  shortName: "Oxycodone",
+  type: "prescription",
+  maxDosesIn24Hours: 4,
+  intervalHours: 6,
+  note: "Only give if specifically prescribed. Follow the prescription label exactly.",
+},
+];
 
-// or any files within the Snack
-import AssetExample from './components/AssetExample';
+const FAQ_ITEMS = [
+  {
+    q: "Why can pain get worse around days 4–7?",
+    a: "Pain often worsens around this stage as the throat heals. Keep using medicines as prescribed. If pain is severe, not improving, or you are worried, seek medical advice.",
+  },
+  {
+    q: "Is ear pain normal?",
+    a: "Ear pain can happen after tonsillectomy because pain from the throat can be felt in the ears.",
+  },
+  {
+    q: "Is bad breath normal?",
+    a: "Bad breath is common during healing. It does not automatically mean infection.",
+  },
+  {
+    q: "Is white or yellow coating normal?",
+    a: "A white or yellow coating in the throat can be part of normal healing after tonsillectomy.",
+  },
+  {
+    q: "What if we miss a dose?",
+    a: "Do not give extra or double doses unless advised by your doctor or pharmacist. Continue according to your discharge instructions or seek advice if unsure.",
+  },
+  {
+    q: "What if there is blood?",
+    a: "Fresh bleeding after tonsillectomy can be serious. If your child has fresh bleeding from the mouth, vomits blood, or brings up clots, call 000 immediately.",
+  },
+  {
+    q: "When should I seek help?",
+    a: "Seek help if your child has bleeding, breathing difficulty, severe pain, repeated vomiting, dehydration, is very drowsy, or you are seriously worried.",
+  },
+];
+const RECOVERY_DAYS = [
+  {
+    day: 0,
+    title: "Day 0: Surgery day",
+    message:
+      "Your child may be sleepy, unsettled, or not very interested in eating. Small, frequent sips are more important than normal eating today. Follow the medicine plan given by your treating team.",
+  },
+  {
+    day: 1,
+    title: "Day 1: First day at home",
+    message:
+      "Pain and tiredness are common. Encourage regular fluids and give medicines as instructed. Your child may prefer soft, cool foods.",
+  },
+  {
+    day: 2,
+    title: "Day 2: Keep fluids going",
+    message:
+      "Throat pain is expected. Drinking is very important, even if eating is limited. Keep using the medicine plan from your discharge instructions.",
+  },
+  {
+    day: 3,
+    title: "Day 3: Pain may still be building",
+    message:
+      "Some children seem worse before they improve. Ear pain, bad breath, and a white or yellow coating in the throat can be part of normal healing.",
+  },
+  {
+    day: 4,
+    title: "Day 4: Pain can increase",
+    message:
+      "Pain often increases around this stage. Keep up fluids and medicines as advised. If pain is not controlled or your child cannot drink, seek medical advice.",
+  },
+  {
+    day: 5,
+    title: "Day 5: Often one of the harder days",
+    message:
+      "This can be a difficult part of recovery. Ear pain and throat pain may be worse. Watch hydration closely and use the Emergency button if you are worried.",
+  },
+  {
+    day: 6,
+    title: "Day 6: Healing is still active",
+    message:
+      "The throat is still healing. Continue medicines as instructed. Fresh bleeding, vomiting blood, or clots are not normal — call 000 immediately.",
+  },
+  {
+    day: 7,
+    title: "Day 7: Pain may still fluctuate",
+    message:
+      "Some children start improving now, but others still have significant pain. Keep encouraging fluids and follow your discharge advice.",
+  },
+  {
+    day: 8,
+    title: "Day 8: Gradual improvement",
+    message:
+      "Many children slowly improve from this point. Appetite and energy may still be reduced. Continue to watch for bleeding and dehydration.",
+  },
+  {
+    day: 9,
+    title: "Day 9: Recovery continues",
+    message:
+      "Your child may have better and worse periods during the day. Keep meals simple and fluids regular.",
+  },
+  {
+    day: 10,
+    title: "Day 10: Usually turning a corner",
+    message:
+      "Pain often starts settling around this stage, though some children still need regular support. Follow your treating team’s advice about medicines and activity.",
+  },
+  {
+    day: 11,
+    title: "Day 11: Energy may be returning",
+    message:
+      "Your child may seem more like themselves. Avoid rushing back to full activity until cleared by your discharge instructions.",
+  },
+  {
+    day: 12,
+    title: "Day 12: Nearly through the main recovery period",
+    message:
+      "Eating, drinking, and energy are often improving. Continue watching for bleeding until fully recovered.",
+  },
+  {
+    day: 13,
+    title: "Day 13: Keep following instructions",
+    message:
+      "Most children are improving, but recovery timing varies. Follow your discharge paperwork for return to school, childcare, sport, and swimming.",
+  },
+  {
+    day: 14,
+    title: "Day 14: Two weeks after surgery",
+    message:
+      "Many children are close to normal by now. If your child still has significant pain, poor drinking, fever, bleeding, or you are worried, contact your treating team.",
+  },
+];
+const RED_FLAGS = [
+  "Fresh bleeding from the mouth",
+  "Vomiting blood",
+  "Bringing up blood clots",
+  "Breathing difficulty",
+  "Very drowsy or hard to wake",
+  "Unable to drink or keep fluids down",
+  "Pain not controlled despite prescribed medicines",
+  "Parent or carer seriously worried",
+];
+
+function roundToNearestHalf(value) {
+  return Math.round(value * 2) / 2;
+}
+
+function formatMl(value) {
+  if (value === null || value === undefined) return "";
+  if (Number.isInteger(value)) return `${value} mL`;
+  return `${value.toFixed(1)} mL`;
+}
+
+function formatDate(date) {
+  if (!date) return "";
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+function getPostOpDay(surgeryDate) {
+  if (!surgeryDate) return null;
+
+  const today = new Date();
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const surgeryOnly = new Date(
+    surgeryDate.getFullYear(),
+    surgeryDate.getMonth(),
+    surgeryDate.getDate()
+  );
+
+  const diffMs = todayOnly.getTime() - surgeryOnly.getTime();
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+function getRecoveryInfo(postOpDay) {
+  if (postOpDay === null || postOpDay === undefined) {
+    return {
+      title: "Recovery guidance",
+      message: "Choose the surgery date to see day-by-day recovery guidance.",
+    };
+  }
+
+  if (postOpDay >= 14) {
+    return RECOVERY_DAYS[14];
+  }
+
+  return RECOVERY_DAYS[postOpDay] || RECOVERY_DAYS[0];
+}
+function calculateLiquidDose(med, weightKg, strengthMgPerMl) {
+  const weight = Number(weightKg);
+
+  if (!weight || weight <= 0 || !strengthMgPerMl) {
+    return {
+      doseMg: null,
+      doseMl: null,
+      capped: false,
+    };
+  }
+
+  const rawMg = weight * med.mgPerKg;
+  const cappedMg = Math.min(rawMg, med.maxSingleDoseMg);
+  const rawMl = cappedMg / strengthMgPerMl;
+
+  return {
+    doseMg: Math.round(cappedMg),
+    doseMl: roundToNearestHalf(rawMl),
+    capped: rawMg > med.maxSingleDoseMg,
+  };
+}
+
+function parseTimeToMinutes(timeText) {
+  const match = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(timeText.trim());
+  if (!match) return null;
+
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatMinutes(totalMinutes) {
+  const minutesInDay = 24 * 60;
+  const clean = ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay;
+
+  const h24 = Math.floor(clean / 60);
+  const mins = clean % 60;
+  const suffix = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+
+  return `${h12}:${String(mins).padStart(2, "0")} ${suffix}`;
+}
+
+function makeNextDoseForMed(med, settings) {
+  const first = parseTimeToMinutes(settings.firstTime || "");
+  if (first === null) return null;
+
+  const nextDue = first + med.intervalHours * 60;
+
+  return {
+    doseNumber: 2,
+    dueMinutes: nextDue,
+    displayTime: formatMinutes(nextDue),
+  };
+}
+
+function currentTime24h() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(
+    now.getMinutes()
+  ).padStart(2, "0")}`;
+}
 
 export default function App() {
+  const [screen, setScreen] = useState("welcome");
+  const [tab, setTab] = useState("today");
+
+  const [acceptedDisclaimer, setAcceptedDisclaimer] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [planConfirmed, setPlanConfirmed] = useState(false);
+
+  const [child, setChild] = useState({
+    name: "",
+    age: "",
+    weightKg: "",
+    surgeryDate: null,
+  });
+
+  const [selectedMeds, setSelectedMeds] = useState({});
+  const [medSettings, setMedSettings] = useState({});
+  const [doseLog, setDoseLog] = useState({});
+
+  const postOpDay = getPostOpDay(child.surgeryDate);
+  const recoveryInfo = getRecoveryInfo(postOpDay);
+
+  const selectedMedicineList = useMemo(() => {
+    return MEDICINES.filter((med) => selectedMeds[med.id]);
+  }, [selectedMeds]);
+
+  const nextDoses = useMemo(() => {
+    const rows = [];
+
+    selectedMedicineList.forEach((med) => {
+      const settings = medSettings[med.id] || {};
+      const nextScheduleItem = makeNextDoseForMed(med, settings);
+      if (!nextScheduleItem) return;
+
+      let dose = {
+        doseMg: null,
+        doseMl: null,
+        capped: false,
+      };
+
+      if (med.type === "liquid") {
+        dose = calculateLiquidDose(med, child.weightKg, settings.strengthMgPerMl);
+      }
+
+      rows.push({
+        id: `${med.id}-next`,
+        medId: med.id,
+        medName: med.name,
+        shortName: med.shortName,
+        type: med.type,
+        time: nextScheduleItem.displayTime,
+        dueMinutes: nextScheduleItem.dueMinutes,
+        doseMg: dose.doseMg,
+        doseMl: dose.doseMl,
+        capped: dose.capped,
+      });
+    });
+
+    return rows.sort((a, b) => a.dueMinutes - b.dueMinutes);
+  }, [selectedMedicineList, medSettings, child.weightKg]);
+
+  const nextDose = nextDoses.find((dose) => !doseLog[dose.id]);
+
+  function updateChild(key, value) {
+    setChild((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateMedSetting(medId, key, value) {
+    setMedSettings((prev) => ({
+      ...prev,
+      [medId]: {
+        ...(prev[medId] || {}),
+        [key]: value,
+      },
+    }));
+  }
+
+  function toggleMedicine(med) {
+    setSelectedMeds((prev) => {
+      const nextSelected = !prev[med.id];
+
+      if (nextSelected) {
+        setMedSettings((old) => ({
+          ...old,
+          [med.id]: {
+            ...(old[med.id] || {}),
+            firstTime: old[med.id]?.firstTime || "",
+            strengthChoiceId: old[med.id]?.strengthChoiceId || "",
+            strengthMgPerMl: old[med.id]?.strengthMgPerMl || null,
+          },
+        }));
+      }
+
+      return {
+        ...prev,
+        [med.id]: nextSelected,
+      };
+    });
+  }
+
+  function validateChild() {
+    if (!child.name.trim()) {
+      Alert.alert("Name needed", "Please enter your child’s name.");
+      return false;
+    }
+
+    if (!child.age.trim()) {
+      Alert.alert("Age needed", "Please enter your child’s age.");
+      return false;
+    }
+
+    if (!child.weightKg.trim() || Number(child.weightKg) <= 0) {
+      Alert.alert("Weight needed", "Please enter your child’s weight in kg.");
+      return false;
+    }
+
+    if (!child.surgeryDate) {
+      Alert.alert("Surgery date needed", "Please choose the surgery date.");
+      return false;
+    }
+
+    return true;
+  }
+
+ function showEmergencyButtonIntro() {
+  setScreen("emergencyButtonInfo");
+}
+
+  function validateMedicineSetup() {
+    if (selectedMedicineList.length === 0) {
+      Alert.alert("Medicine needed", "Please select at least one medicine.");
+      return false;
+    }
+
+    for (const med of selectedMedicineList) {
+      const settings = medSettings[med.id] || {};
+
+      if (med.type === "liquid" && !settings.strengthChoiceId) {
+        Alert.alert(
+          "Bottle strength needed",
+          `Please choose which ${med.shortName} liquid you have. This is usually written on the side of the bottle or packaging.`
+        );
+        return false;
+      }
+
+      if (med.type === "liquid" && settings.strengthChoiceId === "unknown") {
+        Alert.alert(
+          "Check bottle strength",
+          `Dose volume cannot be shown for ${med.shortName} until the bottle strength is confirmed.\n\nCheck the side of the bottle or packaging, or ask your pharmacist.`
+        );
+        return false;
+      }
+
+      if (!settings.firstTime || parseTimeToMinutes(settings.firstTime) === null) {
+        Alert.alert(
+          "First dose time needed",
+          `Enter the first time ${med.shortName} was given today.\n\nUse 24-hour time, for example 06:00 or 14:30.`
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function selectStrength(med, option) {
+    updateMedSetting(med.id, "strengthChoiceId", option.id);
+    updateMedSetting(med.id, "strengthMgPerMl", option.mgPerMl);
+  }
+
+  function doseText(dose) {
+    if (dose.type === "liquid") {
+      if (dose.doseMl !== null) {
+        return `Give ${dose.shortName} ${formatMl(dose.doseMl)}`;
+      }
+
+      return `Give ${dose.shortName} — check bottle strength`;
+    }
+
+    return `Give ${dose.shortName} as prescribed`;
+  }
+
+  function medDosePreview(med) {
+    const settings = medSettings[med.id] || {};
+
+    if (med.type === "liquid") {
+      const dose = calculateLiquidDose(med, child.weightKg, settings.strengthMgPerMl);
+
+      if (dose.doseMl !== null) {
+        return `Give ${med.shortName} ${formatMl(dose.doseMl)}`;
+      }
+
+      return "Choose bottle strength to show dose";
+    }
+
+    return `Give ${med.shortName} as prescribed`;
+  }
+
+ function confirmDoseGiven(dose) {
+  const now = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  setDoseLog((prev) => ({
+    ...prev,
+    [dose.id]: {
+      ...dose,
+      givenAt: now,
+    },
+  }));
+}
+
+  function goEmergency() {
+    setScreen("main");
+    setTab("emergency");
+  }
+
+  if (screen === "welcome") {
+    return (
+      <AppFrame>
+        <Text style={styles.appTitle}>Post-Tonsillectomy Pal</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Post-Tonsillectomy Pal helps you</Text>
+          <Text style={styles.bullet}>• Know what medicine is due next</Text>
+          <Text style={styles.bullet}>• Record when a dose has been given</Text>
+          <Text style={styles.bullet}>• Keep a simple medicine log for the day</Text>
+          <Text style={styles.bullet}>• Understand common recovery symptoms</Text>
+          <Text style={styles.bullet}>• Access urgent bleeding advice quickly</Text>
+        </View>
+
+        <PrimaryButton label="Get started" onPress={() => setScreen("disclaimer")} />
+      </AppFrame>
+    );
+  }
+
+  if (screen === "disclaimer") {
+    return (
+      <AppFrame>
+        <Text style={styles.h1}>Important safety information</Text>
+
+        <Text style={styles.body}>
+          Post-Tonsillectomy Pal is a medicine tracking and recovery support
+          tool. It does not replace your child’s discharge instructions,
+          prescription label, pharmacist, surgeon, GP, hospital team, or
+          emergency care.
+        </Text>
+
+        <Text style={styles.body}>
+          Always follow the instructions given by your child’s treating team.
+        </Text>
+
+        <View style={styles.warningCard}>
+          <Text style={styles.warningText}>
+            If anything in this app looks different from your discharge
+            paperwork, medicine bottle, prescription label, or advice from your
+            treating team, do not use the app’s suggestion. Follow the clinical
+            instructions you were given and contact your hospital, doctor, or
+            pharmacist.
+          </Text>
+        </View>
+
+        <Text style={styles.body}>
+          This app does not diagnose complications and should not be used to
+          decide whether an emergency is serious.
+        </Text>
+
+        <View style={styles.emergencyCard}>
+          <Text style={styles.emergencyTitle}>Call 000 immediately</Text>
+          <Text style={styles.emergencyBody}>
+            If your child has fresh bleeding from the mouth, vomits blood, or
+            brings up clots after tonsillectomy.
+          </Text>
+        </View>
+
+        <CheckRow
+          checked={acceptedDisclaimer}
+          onPress={() => setAcceptedDisclaimer(!acceptedDisclaimer)}
+          label="I understand that this app is only a support tool and that clinical instructions and emergency advice come first."
+        />
+
+        <PrimaryButton
+          label="Continue"
+          disabled={!acceptedDisclaimer}
+          onPress={() => setScreen("child")}
+        />
+      </AppFrame>
+    );
+  }
+
+  if (screen === "child") {
+    return (
+      <AppFrame>
+        <Text style={styles.h1}>Child details</Text>
+
+        <Input
+          label="Child’s name or nickname"
+          value={child.name}
+          onChangeText={(value) => updateChild("name", value)}
+          placeholder="e.g. Sam"
+        />
+
+        <Input
+          label="Age"
+          value={child.age}
+          onChangeText={(value) => updateChild("age", value)}
+          placeholder="e.g. 6"
+          keyboardType="numeric"
+        />
+
+        <Input
+          label="Weight in kg"
+          value={child.weightKg}
+          onChangeText={(value) => updateChild("weightKg", value)}
+          placeholder="e.g. 20"
+          keyboardType="decimal-pad"
+        />
+
+        <Text style={styles.label}>Surgery date</Text>
+
+        <TouchableOpacity
+          style={styles.dateButton}
+          onPress={() => setCalendarVisible(true)}
+        >
+          <Text style={child.surgeryDate ? styles.dateButtonText : styles.datePlaceholder}>
+            {child.surgeryDate ? formatDate(child.surgeryDate) : "Tap to choose surgery date"}
+          </Text>
+        </TouchableOpacity>
+
+        <CalendarModal
+          visible={calendarVisible}
+          selectedDate={child.surgeryDate}
+          onClose={() => setCalendarVisible(false)}
+          onSelectDate={(date) => {
+            updateChild("surgeryDate", date);
+            setCalendarVisible(false);
+          }}
+        />
+
+      <PrimaryButton
+  label="Continue"
+  onPress={() => {
+    if (validateChild()) setScreen("prescribedMedsIntro");
+  }}
+/>
+      </AppFrame>
+    );
+  }
+if (screen === "prescribedMedsIntro") {
   return (
-    <View style={styles.container}>
-      <Text style={styles.paragraph}>
-        Change code in the editor and watch it change on your phone! Save to get a shareable url.
+    <AppFrame>
+      <Text style={styles.h1}>What medicines have you been prescribed?</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.body}>
+          Next, select the medicines listed on your child’s discharge paperwork
+          or prescription.
+        </Text>
+
+        <Text style={styles.body}>
+          Only choose medicines that your child has actually been prescribed or
+          advised to take.
+        </Text>
+      </View>
+
+      <View style={styles.warningCard}>
+        <Text style={styles.warningText}>
+          Do not add medicines that are not written on your child’s discharge
+          instructions, prescription label, or medicine plan.
+        </Text>
+      </View>
+
+      <View style={styles.emergencyCard}>
+        <Text style={styles.emergencyTitle}>Emergency button</Text>
+        <Text style={styles.emergencyBody}>
+          Throughout the app you will see an Emergency button. Use it straight
+          away if you have any concerns.
+        </Text>
+      </View>
+
+      <PrimaryButton
+        label="Select medicines"
+        onPress={() => setScreen("medicines")}
+      />
+    </AppFrame>
+  );
+}
+  if (screen === "medicines") {
+    if (screen === "emergencyButtonInfo") {
+  return (
+    <AppFrame>
+      <Text style={styles.h1}>Emergency button</Text>
+
+      <View style={styles.emergencyCard}>
+        <Text style={styles.emergencyTitle}>Emergency help is always available</Text>
+        <Text style={styles.emergencyBody}>
+          Throughout the app you will see an Emergency button.
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.body}>
+          Please use it straight away if you have any concerns, especially fresh
+          bleeding, vomiting blood, breathing difficulty, severe pain, or if your
+          child is very drowsy or hard to wake.
+        </Text>
+
+        <Text style={styles.body}>
+          If your child has fresh bleeding from the mouth, vomits blood, or
+          brings up clots after tonsillectomy, call 000 immediately.
+        </Text>
+      </View>
+
+      <PrimaryButton
+        label="I understand"
+        onPress={() => setScreen("medicines")}
+      />
+    </AppFrame>
+  );
+}
+    return (
+      <AppFrame>
+        <Text style={styles.h1}>Medicine setup</Text>
+
+        <Text style={styles.body}>
+          Select medicines from your child’s discharge instructions. For Panadol
+          and Nurofen, choose the liquid strength from the bottle or packaging.
+        </Text>
+
+        {MEDICINES.map((med) => {
+          const selected = !!selectedMeds[med.id];
+          const settings = medSettings[med.id] || {};
+
+          return (
+            <View key={med.id} style={[styles.medicineCard, selected && styles.medicineCardActive]}>
+              <TouchableOpacity style={styles.medHeader} onPress={() => toggleMedicine(med)}>
+                <Box checked={selected} />
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{med.name}</Text>
+                  <Text style={styles.muted}>{med.note}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {selected && (
+                <View style={styles.medDetails}>
+                  {med.type === "liquid" && (
+                    <>
+                      <Text style={styles.sectionLabel}>Which liquid do you have?</Text>
+                      <Text style={styles.muted}>
+                        This is usually written on the side of the bottle or packaging.
+                      </Text>
+
+                      {med.strengthOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option.id}
+                          style={[
+                            styles.choiceButton,
+                            settings.strengthChoiceId === option.id && styles.choiceButtonActive,
+                          ]}
+                          onPress={() => selectStrength(med, option)}
+                        >
+                          <Text
+                            style={[
+                              styles.choiceText,
+                              settings.strengthChoiceId === option.id && styles.choiceTextActive,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+
+                      <View style={styles.dosePreviewBox}>
+                        <Text style={styles.sectionLabel}>Dose</Text>
+                        <Text style={styles.actionDoseSmall}>{medDosePreview(med)}</Text>
+                      </View>
+                    </>
+                  )}
+
+                  {med.type === "prescription" && (
+                    <View style={styles.infoBox}>
+                      <Text style={styles.body}>
+                        Dose: use the dose written on the prescription or discharge paperwork.
+                      </Text>
+                    </View>
+                  )}
+
+                  <Input
+                    label={`What time was the first ${med.shortName} dose given today?`}
+                    value={settings.firstTime || ""}
+                    onChangeText={(value) => updateMedSetting(med.id, "firstTime", value)}
+                    placeholder="24-hour time, e.g. 06:00"
+                    keyboardType="numbers-and-punctuation"
+                  />
+
+                  <SecondaryButton
+                    label="Use current time"
+                    onPress={() => updateMedSetting(med.id, "firstTime", currentTime24h())}
+                  />
+
+                  <Text style={styles.muted}>
+                    The app will use this to show the next due dose on the Today screen.
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+
+        <PrimaryButton
+          label="Review plan"
+          onPress={() => {
+            if (validateMedicineSetup()) {
+              setPlanConfirmed(false);
+              setScreen("review");
+            }
+          }}
+        />
+      </AppFrame>
+    );
+  }
+
+  if (screen === "review") {
+    return (
+      <AppFrame>
+        <Text style={styles.h1}>Review plan</Text>
+
+        <Text style={styles.body}>
+          Check this against the discharge paperwork and medicine bottle before using the tracker.
+        </Text>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{child.name}</Text>
+          <Text style={styles.body}>Weight: {child.weightKg} kg</Text>
+          <Text style={styles.body}>Surgery date: {formatDate(child.surgeryDate)}</Text>
+        </View>
+
+        {selectedMedicineList.map((med) => (
+          <View key={med.id} style={styles.card}>
+            <Text style={styles.cardTitle}>{med.name}</Text>
+            <Text style={styles.actionDoseSmall}>{medDosePreview(med)}</Text>
+            <Text style={styles.muted}>
+              First dose time has been entered. The next due dose will appear on the Today screen.
+            </Text>
+          </View>
+        ))}
+
+        <CheckRow
+          checked={planConfirmed}
+          onPress={() => setPlanConfirmed(!planConfirmed)}
+          label="I have checked this plan against the discharge paperwork."
+        />
+
+        <PrimaryButton
+          label="Start tracking"
+          disabled={!planConfirmed}
+          onPress={() => setScreen("main")}
+        />
+
+        <SecondaryButton label="Edit medicines" onPress={() => setScreen("medicines")} />
+      </AppFrame>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" />
+
+      <View style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.container}>
+          {tab === "today" && (
+            <>
+              <Header title="Today" onEmergency={goEmergency} />
+
+              <View style={styles.heroCard}>
+                <Text style={styles.smallCaps}>{child.name || "Your child"}</Text>
+                <Text style={styles.h1}>
+                  {postOpDay === null ? "Recovery tracker" : `Day ${postOpDay} after surgery`}
+                </Text>
+                <Text style={styles.body}>
+                  The next dose is calculated from the first dose time you entered.
+                </Text>
+              </View>
+<View style={styles.card}>
+  <Text style={styles.smallCaps}>What to expect today</Text>
+  <Text style={styles.cardTitle}>{recoveryInfo.title}</Text>
+  <Text style={styles.body}>{recoveryInfo.message}</Text>
+</View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Next dose due</Text>
+
+                {nextDose ? (
+                  <>
+                    <Text style={styles.nextDose}>{nextDose.time}</Text>
+                    <Text style={styles.actionDose}>{doseText(nextDose)}</Text>
+
+                    <Text style={styles.muted}>
+                      Check this matches your discharge instructions. Do not give extra doses.
+                    </Text>
+
+                    <PrimaryButton
+                      label="Tick dose as given"
+                      onPress={() => confirmDoseGiven(nextDose)}
+                    />
+                  </>
+                ) : (
+                  <Text style={styles.body}>No next dose is currently showing.</Text>
+                )}
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Selected medicines</Text>
+
+                {selectedMedicineList.map((med) => (
+                  <View key={med.id} style={styles.simpleMedRow}>
+                    <Text style={styles.simpleMedName}>{med.shortName}</Text>
+                    <Text style={styles.simpleMedDose}>{medDosePreview(med)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.warningCard}>
+                <Text style={styles.warningText}>
+                  Fresh bleeding, vomiting blood, or clots after tonsillectomy: call 000 immediately.
+                </Text>
+              </View>
+            </>
+          )}
+
+          {tab === "meds" && (
+            <>
+              <Header title="Medicine log" onEmergency={goEmergency} />
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Given doses today</Text>
+
+                {Object.keys(doseLog).length === 0 ? (
+                  <Text style={styles.body}>No doses ticked yet.</Text>
+                ) : (
+                  Object.values(doseLog).map((dose) => (
+                    <Text key={dose.id} style={styles.logLine}>
+                      ✓ {dose.time} — {doseText(dose)}, given {dose.givenAt}
+                    </Text>
+                  ))
+                )}
+              </View>
+
+              <SecondaryButton label="Edit medicine setup" onPress={() => setScreen("medicines")} />
+              <SecondaryButton label="Clear ticks" onPress={() => setDoseLog({})} />
+            </>
+          )}
+
+          {tab === "questions" && (
+  <>
+    <Header title="Questions" onEmergency={goEmergency} />
+
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>What to expect day by day</Text>
+      <Text style={styles.body}>
+        Recovery varies between children. This guide explains common patterns,
+        but always follow your child’s discharge instructions.
       </Text>
-      <Card>
-        <AssetExample />
-      </Card>
+    </View>
+
+    {RECOVERY_DAYS.map((item) => (
+      <View key={item.day} style={styles.card}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.body}>{item.message}</Text>
+      </View>
+    ))}
+
+    {FAQ_ITEMS.map((item) => (
+                <View key={item.q} style={styles.card}>
+                  <Text style={styles.cardTitle}>{item.q}</Text>
+                  <Text style={styles.body}>{item.a}</Text>
+
+                  {item.q.toLowerCase().includes("blood") && (
+                    <PrimaryButton label="Open Emergency" onPress={goEmergency} />
+                  )}
+                </View>
+              ))}
+            </>
+          )}
+
+          {tab === "emergency" && (
+            <>
+              <Header title="Emergency" onEmergency={goEmergency} />
+
+              <View style={styles.emergencyCard}>
+                <Text style={styles.emergencyTitle}>Call 000 immediately</Text>
+                <Text style={styles.emergencyBody}>
+                  Fresh bleeding from the mouth, vomiting blood, or bringing up clots can be serious
+                  after tonsillectomy.
+                </Text>
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Seek help for:</Text>
+                {RED_FLAGS.map((item) => (
+                  <Text key={item} style={styles.bullet}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Grab-and-go checklist</Text>
+                <Text style={styles.bullet}>☐ Discharge paperwork</Text>
+                <Text style={styles.bullet}>☐ Medicines</Text>
+                <Text style={styles.bullet}>☐ Medicare details</Text>
+                <Text style={styles.bullet}>☐ Phone and charger</Text>
+                <Text style={styles.bullet}>☐ Spare clothes</Text>
+                <Text style={styles.bullet}>☐ Towel or bowl</Text>
+              </View>
+            </>
+          )}
+
+          {tab === "settings" && (
+            <>
+              <Header title="Settings" onEmergency={goEmergency} />
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Child details</Text>
+                <Text style={styles.body}>Name: {child.name}</Text>
+                <Text style={styles.body}>Age: {child.age}</Text>
+                <Text style={styles.body}>Weight: {child.weightKg} kg</Text>
+                <Text style={styles.body}>Surgery date: {formatDate(child.surgeryDate)}</Text>
+              </View>
+
+              <SecondaryButton label="Edit child details" onPress={() => setScreen("child")} />
+            </>
+          )}
+        </ScrollView>
+
+        <View style={styles.tabBar}>
+          <TabButton label="Today" active={tab === "today"} onPress={() => setTab("today")} />
+          <TabButton label="Meds" active={tab === "meds"} onPress={() => setTab("meds")} />
+          <TabButton
+            label="Questions"
+            active={tab === "questions"}
+            onPress={() => setTab("questions")}
+          />
+          <TabButton
+            label="Emergency"
+            active={tab === "emergency"}
+            danger
+            onPress={() => setTab("emergency")}
+          />
+          <TabButton
+            label="Settings"
+            active={tab === "settings"}
+            onPress={() => setTab("settings")}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function AppFrame({ children }) {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={styles.container}>{children}</ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function Header({ title, onEmergency }) {
+  return (
+    <View style={styles.headerRow}>
+      <Text style={styles.h1}>{title}</Text>
+
+      {onEmergency && (
+        <TouchableOpacity style={styles.emergencyButtonSmall} onPress={onEmergency}>
+          <Text style={styles.emergencyButtonSmallText}>Emergency</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
+function Input({ label, value, onChangeText, placeholder, keyboardType = "default" }) {
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+}
+
+function CalendarModal({ visible, selectedDate, onSelectDate, onClose }) {
+  const today = new Date();
+
+  const [monthDate, setMonthDate] = useState(
+    selectedDate
+      ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      : new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+
+  const title = monthDate.toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const blanks = Array.from({ length: firstDay }, (_, index) => index);
+  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
+
+  function sameDate(a, b) {
+    return (
+      a &&
+      b &&
+      a.getDate() === b.getDate() &&
+      a.getMonth() === b.getMonth() &&
+      a.getFullYear() === b.getFullYear()
+    );
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={styles.modalBackdrop}>
+        <View style={styles.calendarCard}>
+          <Text style={styles.cardTitle}>Choose surgery date</Text>
+
+          <View style={styles.calendarHeader}>
+            <TouchableOpacity
+              style={styles.calendarNavButton}
+              onPress={() => setMonthDate(new Date(year, month - 1, 1))}
+            >
+              <Text style={styles.calendarNavText}>‹</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.calendarTitle}>{title}</Text>
+
+            <TouchableOpacity
+              style={styles.calendarNavButton}
+              onPress={() => setMonthDate(new Date(year, month + 1, 1))}
+            >
+              <Text style={styles.calendarNavText}>›</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.weekRow}>
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <Text key={day} style={styles.weekDay}>
+                {day}
+              </Text>
+            ))}
+          </View>
+
+          <View style={styles.calendarGrid}>
+            {blanks.map((blank) => (
+              <View key={`blank-${blank}`} style={styles.calendarDayBlank} />
+            ))}
+
+            {days.map((day) => {
+              const date = new Date(year, month, day);
+              const isToday = sameDate(date, today);
+              const isSelected = sameDate(date, selectedDate);
+
+              return (
+                <TouchableOpacity
+                  key={day}
+                  style={[
+                    styles.calendarDay,
+                    isToday && styles.calendarDayToday,
+                    isSelected && styles.calendarDaySelected,
+                  ]}
+                  onPress={() => onSelectDate(date)}
+                >
+                  <Text
+                    style={[
+                      styles.calendarDayText,
+                      isToday && styles.calendarDayTextToday,
+                      isSelected && styles.calendarDayTextSelected,
+                    ]}
+                  >
+                    {day}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <SecondaryButton label="Cancel" onPress={onClose} />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function PrimaryButton({ label, onPress, disabled }) {
+  return (
+    <TouchableOpacity
+      style={[styles.primaryButton, disabled && styles.disabledButton]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text style={styles.primaryButtonText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function SecondaryButton({ label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.secondaryButton} onPress={onPress}>
+      <Text style={styles.secondaryButtonText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function Box({ checked }) {
+  return (
+    <View style={[styles.box, checked && styles.boxChecked]}>
+      {checked && <Text style={styles.check}>✓</Text>}
+    </View>
+  );
+}
+
+function CheckRow({ checked, onPress, label }) {
+  return (
+    <TouchableOpacity style={styles.checkRow} onPress={onPress}>
+      <Box checked={checked} />
+      <Text style={styles.checkLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function TabButton({ label, active, onPress, danger }) {
+  return (
+    <TouchableOpacity style={[styles.tabButton, active && styles.tabButtonActive]} onPress={onPress}>
+      <Text style={[styles.tabText, active && styles.tabTextActive, danger && styles.tabTextDanger]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: '#ecf0f1',
-    padding: 8,
+  safe: { flex: 1, backgroundColor: "#F6F7FB" },
+  container: { padding: 20, paddingBottom: 120 },
+  appTitle: {
+    fontSize: 34,
+    fontWeight: "900",
+    color: "#1D3557",
+    marginTop: 20,
+    marginBottom: 16,
   },
-  paragraph: {
-    margin: 24,
+  h1: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#172033",
+    marginBottom: 12,
+  },
+  body: {
+    fontSize: 16,
+    lineHeight: 23,
+    color: "#344054",
+    marginBottom: 8,
+  },
+  muted: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#667085",
+  },
+  bullet: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: "#344054",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 16,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: "#E6E8F0",
+  },
+  heroCard: {
+    backgroundColor: "#EAF4FF",
+    borderRadius: 22,
+    padding: 18,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: "#CBE3FF",
+  },
+  warningCard: {
+    backgroundColor: "#FFF8E6",
+    borderRadius: 18,
+    padding: 16,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: "#F4D58D",
+  },
+  warningText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#6B4E00",
+    fontWeight: "700",
+  },
+  emergencyCard: {
+    backgroundColor: "#FFE8E8",
+    borderRadius: 18,
+    padding: 18,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: "#FF9E9E",
+  },
+  emergencyTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#8A1111",
+    marginBottom: 8,
+  },
+  emergencyBody: {
+    fontSize: 17,
+    lineHeight: 25,
+    color: "#8A1111",
+    fontWeight: "700",
+  },
+  cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "900",
+    color: "#172033",
+    marginBottom: 6,
+  },
+  smallCaps: {
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: "#2563EB",
+    marginBottom: 4,
+  },
+  nextDose: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#1D3557",
+    marginBottom: 6,
+  },
+  actionDose: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#172033",
+    marginBottom: 8,
+  },
+  actionDoseSmall: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#172033",
+    marginBottom: 4,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#172033",
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  inputGroup: { marginVertical: 8 },
+  label: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#172033",
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#D9DEE8",
+  },
+  dateButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#D9DEE8",
+    marginBottom: 10,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: "#172033",
+    fontWeight: "800",
+  },
+  datePlaceholder: {
+    fontSize: 16,
+    color: "#98A2B3",
+  },
+  primaryButton: {
+    backgroundColor: "#2563EB",
+    padding: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    marginTop: 14,
+  },
+  disabledButton: { backgroundColor: "#AEB7C8" },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  secondaryButton: {
+    backgroundColor: "#E9EEF8",
+    padding: 15,
+    borderRadius: 16,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  secondaryButtonText: {
+    color: "#1D3557",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginVertical: 14,
+  },
+  checkLabel: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#344054",
+  },
+  box: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#9AA4B2",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  boxChecked: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  check: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  medicineCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 7,
+    borderWidth: 1,
+    borderColor: "#E6E8F0",
+  },
+  medicineCardActive: {
+    backgroundColor: "#EEF5FF",
+    borderColor: "#2563EB",
+  },
+  medHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  medDetails: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#D9DEE8",
+  },
+  choiceButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: "#D9DEE8",
+    marginTop: 8,
+  },
+  choiceButtonActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  choiceText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#344054",
+  },
+  choiceTextActive: {
+    color: "#FFFFFF",
+  },
+  dosePreviewBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#D9DEE8",
+    marginTop: 10,
+  },
+  infoBox: {
+    backgroundColor: "#EEF5FF",
+    borderRadius: 14,
+    padding: 12,
+    marginVertical: 8,
+  },
+  simpleMedRow: {
+    borderTopWidth: 1,
+    borderTopColor: "#E6E8F0",
+    paddingVertical: 10,
+  },
+  simpleMedName: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#172033",
+  },
+  simpleMedDose: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#344054",
+    marginTop: 2,
+  },
+  logLine: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: "#344054",
+    marginBottom: 6,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  emergencyButtonSmall: {
+    backgroundColor: "#B00020",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+  emergencyButtonSmallText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+  tabBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E6E8F0",
+    paddingHorizontal: 4,
+    paddingTop: 8,
+    paddingBottom: 18,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 12,
+  },
+  tabButtonActive: { backgroundColor: "#EEF5FF" },
+  tabText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#667085",
+  },
+  tabTextActive: { color: "#2563EB" },
+  tabTextDanger: { color: "#B00020" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+    padding: 16,
+  },
+  calendarCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 12,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  calendarTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#172033",
+  },
+  calendarNavButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#E9EEF8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calendarNavText: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#1D3557",
+  },
+  weekRow: { flexDirection: "row", marginBottom: 6 },
+  weekDay: {
+    width: "14.28%",
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#667085",
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  calendarDay: {
+    width: "14.28%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  calendarDayToday: {
+    backgroundColor: "#EAF4FF",
+    borderWidth: 2,
+    borderColor: "#2563EB",
+  },
+  calendarDaySelected: {
+    backgroundColor: "#2563EB",
+    borderWidth: 2,
+    borderColor: "#2563EB",
+  },
+  calendarDayBlank: {
+    width: "14.28%",
+    aspectRatio: 1,
+  },
+  calendarDayText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#172033",
+  },
+  calendarDayTextToday: {
+    color: "#1D3557",
+    fontWeight: "900",
+  },
+  calendarDayTextSelected: {
+    color: "#FFFFFF",
   },
 });

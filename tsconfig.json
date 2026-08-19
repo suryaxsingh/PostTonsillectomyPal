@@ -10,7 +10,12 @@
     "exactOptionalPropertyTypes": false,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["clinical/**/*.ts"]
+  "include": [
+    "clinical/**/*.ts",
+    "data/**/*.ts"
+  ]
 }

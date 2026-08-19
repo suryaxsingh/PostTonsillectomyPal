@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Clinical medication engine for TonsilTrack. Pure TypeScript, no UI dependencies.",
   "scripts": {
-    "test": "node --test clinical/__tests__/*.test.ts",
+    "test": "node --test clinical/__tests__/*.test.ts data/__tests__/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

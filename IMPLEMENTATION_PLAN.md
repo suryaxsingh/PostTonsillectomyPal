@@ -42,9 +42,15 @@ Companion to `AUDIT.md`. Target stack per `Master Build Prompt.md` §1: React Na
 - Unit tests against the exact testing matrix in `Medication.md` §"Updated Testing Matrix With Expected mg Doses" (10/15/…/90 kg rows) — this is a ready-made table of expected outputs, use it directly as test fixtures.
 - **This phase closes the biggest P0 gap**: 3 of 5 medicines currently have no calculation at all.
 
-## Phase 2 — Persistence
-- `storage.ts` over `AsyncStorage` (swap-in point for SQLite later, not needed for MVP).
-- `childProfile.ts` / `medicationPlan.ts` / `doseLog.ts` / `painCheckIn.ts`: typed read/write helpers matching the data model in `PRD.md` §6 and `Medication.md`'s type skeletons. Every saved `MedicationPlan` stores `ruleVersion`, `weightKgAtCalculation`, `parentConfirmed`, and `createdAt` — the audit trail both spec docs require.
+## Phase 2 — Persistence ✅ COMPLETE (96 tests passing overall)
+- `storage.ts`: injected `StorageBackend` rather than a hard AsyncStorage import, so the data layer stays runnable under `node --test` with no React Native present. `createAsyncStorageBackend()` adapts the real thing once the Expo app exists. Reads validate shape and return null on anything malformed; writes report failure explicitly.
+- `childProfile.ts`: `canCalculateDoses()` is the single gate enforcing the "weight must be confirmed" rule, so no screen has to remember it. Changing the weight clears the confirmation.
+- `medicationPlan.ts`: plans are immutable and versioned. Changing weight or medicines supersedes rather than edits, so historical dose logs still resolve against the plan they were given under. A plan is inert until `parentConfirmed`.
+- `doseLog.ts`: append-only. `readWithIntegrity()` reports how many entries were unparseable, because a silently short log reads exactly like a safe one to the 24-hour check. Failed writes say the dose was NOT recorded.
+- `painCheckIn.ts`: one check-in per day, later reading wins. Guidance copy lives here, keyed by category; every message retains the bleeding pathway.
+- `__tests__/integration.test.ts`: exercises the seam between the two phases — stored log driving the rolling 24-hour validator, weight change superseding a plan, and a simulated app restart.
+
+**Known constraint:** Node's strip-only TypeScript cannot compile constructor parameter properties (`constructor(private x: T)`). Declare and assign fields explicitly in this codebase, or the tests stop running.
 
 ## Phase 3 — Onboarding flow (P0/P1)
 Build in spec order, each a separate screen component under `/screens/onboarding`:

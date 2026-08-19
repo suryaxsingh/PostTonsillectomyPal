@@ -1,0 +1,15 @@
+{
+  "name": "tonsiltrack-clinical",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Clinical medication engine for TonsilTrack. Pure TypeScript, no UI dependencies.",
+  "scripts": {
+    "test": "node --test clinical/__tests__/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}

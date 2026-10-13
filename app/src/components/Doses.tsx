@@ -1,4 +1,4 @@
-import { doseLabel } from "../domain/dose";
+import { canGive, doseLabel, tooStrongLabel, unitsLabel } from "../domain/dose";
 import { RULES, OXY_WARNING } from "../domain/rules";
 import type { DoseWithStatus } from "../domain/schedule";
 import { fmt12, fmtTime } from "../domain/time";
@@ -58,21 +58,26 @@ function DoseRow({ dose, label, onTap }: { dose: DoseWithStatus; label: string; 
 export function OxyBlock({ detailed = false }: { detailed?: boolean }) {
   const { d, go, openModal } = useApp();
   const calc = d.doses.oxycodone;
-  const active = d.oxyInPlan && d.hasWeight && !!calc;
+  const active = d.oxyInPlan && d.hasWeight && canGive(calc);
+  const tooStrong = d.oxyInPlan && !!calc?.tooStrong;
   const s = d.oxySafety;
   const headline = !d.oxyInPlan ? "Oxycodone — not in this plan" : !d.hasWeight ? "Oxycodone — weight needed" : "Oxycodone — only if needed";
   const doseShown = active ? calc.doseMg + " mg" : "—";
   const mlShown = !d.oxyInPlan
     ? "Doses appear once it is added to the plan"
+    : tooStrong
+      ? tooStrongLabel(calc!)
     : !active
       ? "Enter a weight to see the dose"
+      : calc.units !== null
+        ? unitsLabel(calc)
       : calc.doseMl !== null
         ? calc.doseMl + " mL"
         : calc.form === "liquid"
           ? "mL dose not shown — concentration not confirmed"
           : "";
   const give = () => openModal({ kind: s.blocked ? "oxyBlocked" : "oxy" });
-  const alt = () => (d.oxyInPlan || !d.hasWeight ? go("childSetup") : openModal({ kind: "editMeds" }));
+  const alt = () => (tooStrong || !d.oxyInPlan ? openModal({ kind: "editMeds" }) : go("childSetup"));
   const count = s.countIn24h + " of " + s.max + " doses recorded in the last 24 hours";
 
   return (
@@ -126,10 +131,14 @@ export function OxyBlock({ detailed = false }: { detailed?: boolean }) {
       ) : (
         <>
           <button type="button" className="btn btn-outline-red btn-sm" onClick={alt}>
-            {d.oxyInPlan ? "Enter your child's weight" : "Add oxycodone to the plan"}
+            {tooStrong ? "Change oxycodone to the liquid" : d.oxyInPlan ? "Enter your child's weight" : "Add oxycodone to the plan"}
           </button>
           <div className="meta mt-8">
-            {d.oxyInPlan ? "Prescribed, but the dose needs your child's weight." : "Not in this child's plan. Only add it if a doctor prescribed it."}
+            {tooStrong
+              ? "One " + calc!.unitMg + " mg tablet is more than your child's dose. Ask your pharmacist about the liquid."
+              : d.oxyInPlan
+                ? "Prescribed, but the dose needs your child's weight."
+                : "Not in this child's plan. Only add it if a doctor prescribed it."}
           </div>
         </>
       )}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { AnaesthetistNote, CheckBox, Tick } from "../components/bits";
 import { ChevronLeftIcon } from "../components/Icons";
 import { HOSPITALS, SURGERY_TYPES } from "../domain/content";
-import { parseWeight, weightLooksImplausible, type FormChoice } from "../domain/dose";
+import { parseWeight, tooStrongLabel, unitsLabel, weightLooksImplausible, type FormChoice } from "../domain/dose";
 import { MED_ORDER, RULES, RULE_VERSION, type MedForm, type MedId } from "../domain/rules";
 import { dateKey } from "../domain/time";
 import { requestPermission } from "../state/notifications";
@@ -323,6 +323,11 @@ function MedFormStep() {
                   </div>
                 </>
               )}
+              {(f.form === "tablet" || f.form === "capsule") && (
+                <div style={{ fontSize: 12, lineHeight: 1.4, fontWeight: 600, color: "var(--brand-sage)" }}>
+                  Doses are rounded down to whole {RULES[id].solidUnitMg} mg {f.form}s.
+                </div>
+              )}
             </div>
           );
         })}
@@ -336,10 +341,11 @@ function MedFormStep() {
 
 function Plan() {
   const { p, d, set, go, openModal } = useApp();
-  const ready = p.planConfirmed && d.hasWeight;
+  const tooStrong = d.selectedIds.filter((id) => d.doses[id]?.tooStrong);
+  const ready = p.planConfirmed && d.hasWeight && tooStrong.length === 0;
   const next = () => {
     if (!d.hasWeight) return openModal({ kind: "needWeight" });
-    if (!p.planConfirmed) return;
+    if (!ready) return;
     set((prev) => ({ planVersion: prev.planVersion + 1 }));
     go("reminders");
   };
@@ -366,7 +372,12 @@ function Plan() {
                 <div style={{ font: "700 16px/1.2 var(--font)" }}>{r.name}</div>
                 <div className={"plan-tag" + (prn ? " prn" : "")}>{r.freqLabel}</div>
               </div>
-              <div className="big mb-6">{c ? c.doseMg + " mg" : "—"}</div>
+              <div className="big mb-6">{c && !c.tooStrong ? c.doseMg + " mg" : "—"}</div>
+              {c && c.units !== null && (
+                <div className="mb-12" style={{ fontSize: 14, fontWeight: 700, color: c.tooStrong ? "var(--color-accent-700)" : "var(--brand-sage)" }}>
+                  {c.tooStrong ? tooStrongLabel(c) : unitsLabel(c) + " (" + c.unitMg + " mg each)"}
+                </div>
+              )}
               {(!c || c.form === "liquid") && (
                 <div className="mb-12" style={{ fontSize: 14, fontWeight: 700, color: c?.doseMl ? "var(--brand-sage)" : "var(--color-accent-700)" }}>
                   {!c ? "Dose needs a weight" : c.doseMl !== null ? c.doseMl + " mL" : "mL dose not shown — concentration not confirmed"}
@@ -402,6 +413,12 @@ function Plan() {
         })}
         {d.selectedIds.length === 0 && <div className="note">No medicines in this plan.</div>}
       </div>
+      {tooStrong.length > 0 && (
+        <div className="note note-red mt-18">
+          {tooStrong.map((id) => RULES[id].shortName).join(" and ")}: one tablet or capsule is more than your child's dose. Ask your pharmacist about the
+          liquid, then go back and change the medicine form.
+        </div>
+      )}
       <div className="mt-18">
         <CheckBox on={p.planConfirmed} onToggle={() => set({ planConfirmed: !p.planConfirmed })}>
           I confirm these medicines were prescribed for my child and this plan matches my discharge instructions.

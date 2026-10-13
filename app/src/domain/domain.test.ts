@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calcDose, doseLabel, parseWeight, roundDoseMg, weightLooksImplausible } from "./dose";
+import { calcDose, canGive, doseLabel, parseWeight, roundDoseMg, weightLooksImplausible } from "./dose";
 import { activeEvents, makeEvent, safetyCheck, type NewDoseEvent } from "./events";
 import { RULE_VERSION } from "./rules";
 import { daySchedule, statusOf } from "./schedule";
@@ -67,6 +67,29 @@ describe("calcDose", () => {
     expect(calcDose("paracetamol", 20, { form: "liquid", conc: null })!.doseMl).toBeNull();
     expect(calcDose("paracetamol", 20, { form: "tablet", conc: 48 })!.doseMl).toBeNull();
     expect(doseLabel(calcDose("paracetamol", 20, { form: "liquid", conc: 24 }))).toBe("300 mg · 12.5 mL");
+  });
+});
+
+describe("tablets and capsules", () => {
+  const tab = { form: "tablet" as const, conc: null };
+  it("rounds paracetamol down to whole 500 mg tablets", () => {
+    expect(calcDose("paracetamol", 40, tab)).toMatchObject({ doseMg: 500, units: 1, tooStrong: false }); // 600 mg → 1 tablet
+    expect(calcDose("paracetamol", 70, tab)).toMatchObject({ doseMg: 1000, units: 2 }); // capped 1000 → 2 tablets
+    expect(doseLabel(calcDose("paracetamol", 70, tab))).toBe("1000 mg · 2 tablets");
+  });
+  it("rounds ibuprofen down to whole 200 mg tablets", () => {
+    expect(calcDose("ibuprofen", 25, tab)).toMatchObject({ doseMg: 200, units: 1 }); // 250 → 200
+    expect(calcDose("ibuprofen", 45, tab)).toMatchObject({ doseMg: 400, units: 2 }); // capped 400
+  });
+  it("never goes above the weight-based dose; flags tablets that are too strong", () => {
+    const small = calcDose("paracetamol", 18.5, tab)!; // 277 mg < one 500 mg tablet
+    expect(small.tooStrong).toBe(true);
+    expect(canGive(small)).toBe(false);
+    expect(doseLabel(small)).toBe("500 mg tablets are too strong — use the liquid");
+    expect(canGive(calcDose("paracetamol", 18.5, { form: "liquid", conc: 48 }))).toBe(true);
+  });
+  it("labels capsules as capsules", () => {
+    expect(doseLabel(calcDose("celecoxib", 30, { form: "capsule", conc: null }))).toBe("100 mg · 1 capsule"); // 120 → 100
   });
 });
 

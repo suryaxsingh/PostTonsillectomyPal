@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { calcDose, parseWeight, type CalculatedDose, type FormChoice } from "../domain/dose";
+import { calcDose, canGive, parseWeight, type CalculatedDose, type FormChoice } from "../domain/dose";
 import { makeEvent, safetyCheck, type DoseEvent, type SafetyCheck } from "../domain/events";
 import { MED_ORDER, type MedId } from "../domain/rules";
 import { daySchedule, selectedMeds, type DoseWithStatus, type ScheduledDose } from "../domain/schedule";
@@ -206,6 +206,7 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
     (dose, type) => {
       const at = Date.now();
       const calc = d.doses[dose.medId];
+      if (type === "given" && !canGive(calc)) return;
       const e = makeEvent({
         type,
         medId: dose.medId,
@@ -248,7 +249,7 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
   const recordOxy = useCallback(() => {
     const at = Date.now();
     // Re-check at the moment of recording, not just when the modal opened.
-    if (safetyCheck(p.events, "oxycodone", at).blocked || !d.doses.oxycodone) {
+    if (safetyCheck(p.events, "oxycodone", at).blocked || !canGive(d.doses.oxycodone)) {
       setNow(at);
       setUiState((u) => ({ ...u, modal: { kind: "oxyBlocked" } }));
       return;

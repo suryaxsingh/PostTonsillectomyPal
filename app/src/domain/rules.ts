@@ -1,12 +1,12 @@
 /**
  * Clinical rules table.
  *
- * Clinically signed off as LOCAL-TONSIL-v1.0 (sign-off reported by the app
- * owner, 2026-10-11 — keep the signed record with the clinical team).
+ * v1.0 was clinically signed off (reported by the app owner, 2026-10-11).
+ * v1.1 adds whole-tablet/capsule rounding (solidUnitMg) — NEEDS SIGN-OFF.
  * Any change to this table needs a new clinical sign-off and must bump
  * RULE_VERSION; the version is recorded against every dose event.
  */
-export const RULE_VERSION = "LOCAL-TONSIL-v1.0";
+export const RULE_VERSION = "LOCAL-TONSIL-v1.1";
 
 export type MedId = "paracetamol" | "ibuprofen" | "celecoxib" | "dexamethasone" | "oxycodone";
 export type MedForm = "liquid" | "tablet" | "capsule" | "other";
@@ -42,6 +42,11 @@ export interface MedRule {
   postOpDays?: number[];
   daysLabel: string;
   concs: ConcOption[];
+  /**
+   * Strength of one tablet/capsule in mg. Solid doses are rounded DOWN to a
+   * whole number of these, so they never exceed the weight-based dose.
+   */
+  solidUnitMg: number;
   warnings: string[];
 }
 
@@ -65,6 +70,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "48 mg/mL", value: 48 },
       { label: "Not sure", value: null },
     ],
+    solidUnitMg: 500,
     warnings: [
       "Do not give other medicines containing paracetamol unless advised.",
       "Do not give more than 4 doses in 24 hours.",
@@ -90,6 +96,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "40 mg/mL", value: 40 },
       { label: "Not sure", value: null },
     ],
+    solidUnitMg: 200,
     warnings: [
       "Only use ibuprofen if it was prescribed or recommended for your child.",
       "Do not give more than 3 doses in 24 hours.",
@@ -114,6 +121,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "Enter manually", value: null },
       { label: "Not sure", value: null },
     ],
+    solidUnitMg: 100,
     warnings: [
       "Only give celecoxib if it was prescribed.",
       "Do not combine with other anti-inflammatory medicines unless advised.",
@@ -139,6 +147,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "1 mg/mL", value: 1 },
       { label: "Not sure", value: null },
     ],
+    solidUnitMg: 0.5,
     warnings: [
       "Only give dexamethasone if prescribed.",
       "Give only on the days listed in your discharge instructions.",
@@ -163,6 +172,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "5 mg/mL", value: 5 },
       { label: "Not sure", value: null },
     ],
+    solidUnitMg: 5,
     warnings: [
       "Oxycodone can cause sleepiness and breathing problems.",
       "Only give oxycodone if it was specifically prescribed.",

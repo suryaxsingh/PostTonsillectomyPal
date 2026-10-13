@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { doseLabel, parseWeight } from "../domain/dose";
+import { doseLabel, parseWeight, tooStrongLabel, unitWord } from "../domain/dose";
 import { safetyCheck } from "../domain/events";
 import { RULES } from "../domain/rules";
 import { fmt12, fmtTime } from "../domain/time";
@@ -95,6 +95,24 @@ function build(m: Modal, app: ReturnType<typeof useApp>): Spec {
       body: "Doses are worked out from your child's weight in kilograms. Enter the weight to see and record doses.",
       bodyRed: true,
       actions: [{ label: "Enter weight", tone: "ink", onTap: () => go("childSetup") }, cancel],
+    };
+  }
+
+  // A tablet/capsule stronger than the child's dose can never be recorded.
+  const tooStrongMed = m.kind === "confirm" ? m.dose.medId : m.kind === "oxy" ? "oxycodone" : null;
+  const strong = tooStrongMed ? d.doses[tooStrongMed] : null;
+  if (strong?.tooStrong) {
+    return {
+      kicker: "Check the medicine form",
+      red: true,
+      title: tooStrongLabel(strong),
+      rows: [
+        ["Medicine", RULES[strong.medId].shortName],
+        ["Child's dose", "less than one " + unitWord(strong, 1)],
+      ],
+      body: `One ${strong.unitMg} mg ${unitWord(strong, 1)} is more than ${child === "Your child" ? "your child" : child} should have in a dose. Ask your pharmacist about the liquid, then change the medicine form in the plan.`,
+      bodyRed: true,
+      actions: [{ label: "Change medicine form", tone: "ink", onTap: () => openModal({ kind: "editMeds" }) }, { label: "Close", tone: "quiet", onTap: closeModal }],
     };
   }
 

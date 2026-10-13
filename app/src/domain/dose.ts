@@ -27,7 +27,17 @@ export interface CalculatedDose {
   doseMl: number | null;
   conc: number | null;
   form: MedForm | undefined;
+  /** Tablets/capsules: whole units per dose, and the strength of one unit. */
+  units: number | null;
+  unitMg: number | null;
+  /**
+   * True when even one tablet/capsule is more than the weight-based dose.
+   * Nothing can be given in that form — the parent is pointed to the liquid.
+   */
+  tooStrong: boolean;
 }
+
+const SOLID: MedForm[] = ["tablet", "capsule"];
 
 /**
  * Weight-based dose: min(weight × mgPerKg, maxSingleDoseMg), rounded down.
@@ -36,14 +46,41 @@ export interface CalculatedDose {
 export function calcDose(medId: MedId, weightKg: number | null, choice?: FormChoice): CalculatedDose | null {
   if (weightKg === null || !(weightKg > 0)) return null;
   const r = RULES[medId];
-  const doseMg = roundDoseMg(Math.min(weightKg * r.mgPerKg, r.maxSingleDoseMg));
-  const conc = choice?.form === "liquid" && choice.conc && choice.conc > 0 ? choice.conc : null;
-  const doseMl = conc ? Math.floor((doseMg / conc) * 10 + 1e-9) / 10 : null;
-  return { medId, doseMg, doseMl, conc, form: choice?.form };
+  const weightDoseMg = roundDoseMg(Math.min(weightKg * r.mgPerKg, r.maxSingleDoseMg));
+  const form = choice?.form;
+  if (form && SOLID.includes(form)) {
+    const units = Math.floor(weightDoseMg / r.solidUnitMg + 1e-9);
+    const doseMg = Math.round(units * r.solidUnitMg * 10) / 10;
+    return { medId, doseMg, doseMl: null, conc: null, form, units, unitMg: r.solidUnitMg, tooStrong: units === 0 };
+  }
+  const conc = form === "liquid" && choice?.conc && choice.conc > 0 ? choice.conc : null;
+  const doseMl = conc ? Math.floor((weightDoseMg / conc) * 10 + 1e-9) / 10 : null;
+  return { medId, doseMg: weightDoseMg, doseMl, conc, form, units: null, unitMg: null, tooStrong: false };
+}
+
+/** A dose that can actually be given and recorded. */
+export function canGive(d: CalculatedDose | null): d is CalculatedDose {
+  return !!d && !d.tooStrong;
+}
+
+export function unitWord(d: CalculatedDose, n: number): string {
+  const w = d.form === "capsule" ? "capsule" : "tablet";
+  return n === 1 ? w : w + "s";
+}
+
+/** e.g. "1 tablet", "2 tablets" (whole units only). */
+export function unitsLabel(d: CalculatedDose): string {
+  return d.units + " " + unitWord(d, d.units ?? 0);
+}
+
+export function tooStrongLabel(d: CalculatedDose): string {
+  return d.unitMg + " mg " + unitWord(d, 2) + " are too strong — use the liquid";
 }
 
 export function doseLabel(d: CalculatedDose | null): string {
   if (!d) return "dose not set";
+  if (d.tooStrong) return tooStrongLabel(d);
+  if (d.units !== null) return d.doseMg + " mg · " + unitsLabel(d);
   return d.doseMg + " mg" + (d.doseMl !== null ? " · " + d.doseMl + " mL" : "");
 }
 

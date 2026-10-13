@@ -70,8 +70,14 @@ export function Medicines() {
                 {open && (
                   <div className="stack gap-8 mt-12" style={{ borderTop: "1px solid var(--color-divider)", paddingTop: 12, fontSize: 12.5 }}>
                     <div>
-                      <strong>Concentration:</strong>{" "}
-                      {form.form === "liquid" ? (c?.conc ? c.conc + " mg/mL confirmed" : "not confirmed — mg dose only") : form.form}
+                      <strong>{form.form === "liquid" ? "Concentration:" : "Form:"}</strong>{" "}
+                      {form.form === "liquid"
+                        ? c?.conc
+                          ? c.conc + " mg/mL confirmed"
+                          : "not confirmed — mg dose only"
+                        : form.form === "tablet" || form.form === "capsule"
+                          ? form.form + "s, " + r.solidUnitMg + " mg each"
+                          : form.form}
                     </div>
                     <div>
                       <strong>Active days:</strong> {r.daysLabel}

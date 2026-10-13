@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { RULE_VERSION } from "./domain/rules";
 import { dateKey } from "./domain/time";
 import { AppProvider, defaultPersisted, STORE_KEY } from "./state/store";
 import type { Persisted } from "./state/types";
@@ -72,7 +73,7 @@ describe("Home", () => {
 
     const saved = JSON.parse(localStorage.getItem(STORE_KEY)!) as Persisted;
     expect(saved.events).toHaveLength(1);
-    expect(saved.events[0]).toMatchObject({ type: "given", medId: "paracetamol", doseMg: 277, ruleVersion: "LOCAL-TONSIL-v1.0", planVersion: 1 });
+    expect(saved.events[0]).toMatchObject({ type: "given", medId: "paracetamol", doseMg: 277, ruleVersion: RULE_VERSION, planVersion: 1 });
   });
 
   it("undoing a dose appends a retraction rather than deleting the record", () => {
@@ -174,9 +175,28 @@ describe("SOS", () => {
 describe("tablets and capsules", () => {
   it("show mg doses only, with no 'concentration not confirmed' warning", () => {
     const forms = { ...confirmedApp.forms!, paracetamol: { form: "tablet" as const, conc: null }, ibuprofen: { form: "liquid" as const, conc: null } };
-    setup({ ...confirmedApp, screen: "plan", planConfirmed: false, forms, selected: { paracetamol: true, ibuprofen: true } });
-    expect(screen.getByText("277 mg")).toBeTruthy();
+    setup({ ...confirmedApp, weight: "40", screen: "plan", planConfirmed: false, forms, selected: { paracetamol: true, ibuprofen: true } });
+    expect(screen.getByText("500 mg")).toBeTruthy();
+    expect(screen.getByText("1 tablet (500 mg each)")).toBeTruthy();
     // Only the liquid with no concentration (ibuprofen) gets the warning.
     expect(screen.getAllByText("mL dose not shown — concentration not confirmed")).toHaveLength(1);
+  });
+
+  it("blocks a plan where a tablet is stronger than the child's dose", () => {
+    const forms = { ...confirmedApp.forms!, paracetamol: { form: "tablet" as const, conc: null } };
+    setup({ ...confirmedApp, screen: "plan", planConfirmed: false, forms, selected: { paracetamol: true } });
+    expect(screen.getByText("500 mg tablets are too strong — use the liquid")).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /I confirm/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Use this medicine plan" }));
+    expect(screen.getByText("Review medicine plan")).toBeTruthy();
+  });
+
+  it("never records a too-strong tablet dose from Home", () => {
+    const forms = { ...confirmedApp.forms!, paracetamol: { form: "tablet" as const, conc: null } };
+    setup({ ...confirmedApp, forms });
+    fireEvent.click(screen.getByRole("button", { name: /12:00 pm Paracetamol/ }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("500 mg tablets are too strong — use the liquid")).toBeTruthy();
+    expect(within(dialog).queryByRole("button", { name: "Yes, given now" })).toBeNull();
   });
 });

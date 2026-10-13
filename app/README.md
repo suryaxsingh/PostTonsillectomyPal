@@ -116,6 +116,7 @@ Do this once yourself on a test phone:
 - **Reminders only work while the app is open or recently used.** Phones don't let a web app ring an alarm when it's fully closed. The red **overdue** banner on the Home screen always shows if a dose is missed. Parents should still set their own phone alarms for overnight doses.
 - **The dose record can be shared.** **Settings → Download dose record** saves a file of everything that was ticked off, which a nurse or doctor can open.
 - **Emergency advice is always one tap away** through the red **SOS** button.
+- **Tablets come in whole tablets only.** For tablets and capsules the app shows the dose as whole tablets (for example "500 mg · 1 tablet"), rounded down. If even one tablet is too strong for the child, it says so and points to the liquid instead.
 - **Dose times move with the real doses.** The app works out each next dose from when the last one was actually given: paracetamol every 6 hours, ibuprofen every 8 hours, celecoxib every 12 hours. If paracetamol is first given at 8 am, the next doses show at 2 pm and 8 pm. If a dose is given late, the ones after it move later too. Overnight doses carry on into the next day.
 
 ---
@@ -136,7 +137,22 @@ The link stays the same. Phones pick up the new version the next time the app is
 
 ## Clinical sign-off
 
-The medicine rules are version **LOCAL-TONSIL-v1.0**. This version appears in the app under **Settings** and on every dose record. The app owner has confirmed that a clinician signed it off. Keep a copy of that sign-off (who, when, what version) with your clinical governance records.
+The medicine rules are now version **LOCAL-TONSIL-v1.1**. The version appears in the app under **Settings** and on every dose record.
+
+- **v1.0** was signed off by a clinician (confirmed by the app owner).
+- **v1.1** adds whole-tablet rounding. **It needs a clinician to sign it off before parents use it.** Tablet and capsule doses are rounded **down** to whole tablets, so a dose never goes above the weight-based amount. If one tablet is more than the child's dose, the app says tablets are too strong, suggests the liquid, and won't record a tablet dose.
+
+| Medicine | Tablet/capsule size used |
+| --- | --- |
+| Paracetamol | 500 mg tablet |
+| Ibuprofen | 200 mg tablet |
+| Celecoxib | 100 mg capsule |
+| Dexamethasone | 0.5 mg tablet |
+| Oxycodone | 5 mg tablet |
+
+The clinician should confirm these sizes, especially celecoxib, dexamethasone and oxycodone. They can be changed in the code (`src/domain/rules.ts`, the `solidUnitMg` value for each medicine).
+
+Keep a copy of each sign-off (who, when, what version) with your clinical governance records.
 
 ---
 

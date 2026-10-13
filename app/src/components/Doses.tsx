@@ -12,6 +12,7 @@ export function DoseRows() {
     return <div className="body-sm" style={{ padding: "12px 0" }}>No scheduled medicines today.</div>;
   }
   return (
+    <>
     <div className="list">
       {d.todays.map((dose) => (
         <DoseRow
@@ -25,6 +26,10 @@ export function DoseRows() {
         />
       ))}
     </div>
+    <div className="meta mt-8" style={{ fontWeight: 600 }}>
+      Times are worked out from when each dose is actually given — the next dose moves if one is given early or late.
+    </div>
+    </>
   );
 }
 

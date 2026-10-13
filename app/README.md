@@ -2,9 +2,48 @@
 
 This guide is written for people who don't do coding. Follow the steps in order and you will have a link that parents can open on their phone and save to their home screen like a normal app.
 
+There are two ways to start:
+
+- **Quickest:** use the ready-made app file, **`post-tonsillectomy-pal.zip`**, and start at Part 1.
+- **From the code:** if you've changed the code, or want to make the app file yourself, do **Part 0** first, then skip Part 1 and continue from Part 2.
+
 **Time needed:** about 15 minutes.
 **Cost:** free.
 **What you need:** a computer (Windows or Mac), an internet connection, an email address, and a phone to test on.
+
+---
+
+## Part 0 (optional) — Make the app file yourself from the code
+
+You only need this if you're starting from the code (**`post-tonsillectomy-pal-source.zip`**, or the `app` folder on GitHub) instead of the ready-made app file. It takes about 15 minutes the first time.
+
+**Step 1 — Install Node.js (one time only)**
+1. Go to **https://nodejs.org**.
+2. Download the version marked **LTS** and install it. Click Next/Continue through the installer and keep all the default options.
+
+**Step 2 — Unzip the code**
+1. Unzip **`post-tonsillectomy-pal-source.zip`** (right-click → Extract All on Windows; double-click on Mac).
+2. Inside, you'll find a folder called **`app`**. Move it to your Desktop.
+
+**Step 3 — Open a command window in that folder**
+- **Windows:** open the `app` folder, click the address bar at the top of the window, type `cmd` and press **Enter**. A black window opens.
+- **Mac:** open the **Terminal** app (search for it with Spotlight). Type `cd ` (with a space after it), drag the `app` folder into the Terminal window, and press **Enter**.
+
+**Step 4 — Build the app**
+Type these two commands, pressing **Enter** after each one. Wait for each to finish before typing the next.
+
+```
+npm install
+npm run build
+```
+
+- The first command downloads what the app needs. It takes 1–3 minutes and prints a lot of text. That's normal.
+- The second command makes the app. It finishes with a line ending in **"built in …"**.
+
+**Step 5 — Find the finished app**
+Inside the `app` folder there is now a folder called **`dist`**. **That `dist` folder is the app.** Use it in Part 2 wherever the guide says the `post-tonsillectomy-pal` folder, and skip Part 1.
+
+> **Optional check before you upload:** type `npm test` and press Enter. It runs the app's safety checks and should finish with every test **passed**. If any test fails, don't upload — ask a developer to look at it.
 
 ---
 
@@ -64,6 +103,7 @@ Do this once yourself on a test phone:
 - [ ] Go through setup with a made-up child (for example, weight 18.5 kg).
 - [ ] Check the doses on the **Review medicine plan** screen match what your clinician expects.
 - [ ] On the Home screen, tap a medicine, confirm it, and check it shows as **given**.
+- [ ] Check that the **next** dose of that medicine moved to the right time (for example, paracetamol given at 8 am → next at 2 pm).
 - [ ] Close the app completely, reopen it, and check your entries are still there.
 - [ ] Tap **SOS → Yes → Call 000** and check the phone offers to dial. **Don't actually call.**
 - [ ] When finished, go to **Settings → Start over** to clear the test child.
@@ -76,6 +116,7 @@ Do this once yourself on a test phone:
 - **Reminders only work while the app is open or recently used.** Phones don't let a web app ring an alarm when it's fully closed. The red **overdue** banner on the Home screen always shows if a dose is missed. Parents should still set their own phone alarms for overnight doses.
 - **The dose record can be shared.** **Settings → Download dose record** saves a file of everything that was ticked off, which a nurse or doctor can open.
 - **Emergency advice is always one tap away** through the red **SOS** button.
+- **Dose times move with the real doses.** The app works out each next dose from when the last one was actually given: paracetamol every 6 hours, ibuprofen every 8 hours, celecoxib every 12 hours. If paracetamol is first given at 8 am, the next doses show at 2 pm and 8 pm. If a dose is given late, the ones after it move later too. Overnight doses carry on into the next day.
 
 ---
 

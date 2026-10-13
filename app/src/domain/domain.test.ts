@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { calcDose, doseLabel, parseWeight, roundDoseMg, weightLooksImplausible } from "./dose";
-import { activeEvents, makeEvent, safetyCheck, slotRecord, type NewDoseEvent } from "./events";
+import { activeEvents, makeEvent, safetyCheck, type NewDoseEvent } from "./events";
 import { RULE_VERSION } from "./rules";
-import { dayStatuses, scheduleForDay, statusOf } from "./schedule";
+import { daySchedule, statusOf } from "./schedule";
 import { daysSinceSurgery, fmt12, postOpDay } from "./time";
 
 const H = 3_600_000;
@@ -98,44 +98,57 @@ describe("time", () => {
 
 describe("schedule", () => {
   const sel = { paracetamol: true, ibuprofen: true, dexamethasone: true, oxycodone: true };
+  const DAY = "2026-10-11";
+  const at = (h: number, m = 0, day = 11) => new Date(2026, 9, day, h, m).getTime();
+  const times = (rows: { medId: string; time: string }[], med: string) => rows.filter((r) => r.medId === med).map((r) => r.time);
+  const given = (medId: "paracetamol" | "ibuprofen", slot: number, ms: number, slotDate = DAY) =>
+    ev({ at: ms, medId, slotIndex: slot, slotTime: null, slotDate });
 
-  it("lists fixed-time doses, sorted, excluding PRN and off-days", () => {
-    const d4 = scheduleForDay(sel, 4).map((d) => d.key);
-    expect(d4).toEqual([
-      "paracetamol-06:00",
-      "ibuprofen-08:00",
-      "paracetamol-12:00",
-      "ibuprofen-14:00",
-      "paracetamol-18:00",
-      "ibuprofen-20:00",
-      "paracetamol-22:00",
-    ]);
-    expect(scheduleForDay(sel, 5).some((d) => d.medId === "dexamethasone")).toBe(true);
+  it("starts from default first times when nothing has been given, excluding PRN and off-days", () => {
+    const rows = daySchedule(sel, 4, [], DAY, 0);
+    expect(times(rows, "paracetamol")).toEqual(["06:00", "12:00", "18:00"]);
+    expect(times(rows, "ibuprofen")).toEqual(["08:00", "16:00"]);
+    expect(rows.some((r) => r.medId === "oxycodone" || r.medId === "dexamethasone")).toBe(false);
+    expect(daySchedule(sel, 5, [], DAY, 0).some((r) => r.medId === "dexamethasone")).toBe(true);
+  });
+
+  it("works each next dose out from when the previous one was actually given", () => {
+    // Paracetamol first given at 8:00 → next 2:00 pm → 8:00 pm (6-hourly).
+    let rows = daySchedule(sel, 4, [given("paracetamol", 0, at(8))], DAY, 9 * 60);
+    expect(times(rows, "paracetamol")).toEqual(["06:00", "14:00", "20:00"]);
+    expect(rows.find((r) => r.key === "paracetamol-0")!.status).toBe("given");
+
+    // Second dose given late at 3:10 pm → third moves to 9:10 pm.
+    rows = daySchedule(sel, 4, [given("paracetamol", 0, at(8)), given("paracetamol", 1, at(15, 10))], DAY, 16 * 60);
+    expect(times(rows, "paracetamol")).toEqual(["06:00", "14:00", "21:10"]);
+
+    // Ibuprofen first given at 9:00 → 5:00 pm (8-hourly); the next would be 1 am tomorrow.
+    rows = daySchedule(sel, 4, [given("ibuprofen", 0, at(9))], DAY, 10 * 60);
+    expect(times(rows, "ibuprofen")).toEqual(["08:00", "17:00"]);
+  });
+
+  it("carries on overnight: today's first dose follows yesterday's last dose", () => {
+    const last = given("paracetamol", 2, at(20, 0, 10), "2026-10-10");
+    const rows = daySchedule(sel, 4, [last], DAY, 0);
+    expect(times(rows, "paracetamol")).toEqual(["02:00", "08:00", "14:00", "20:00"]);
   });
 
   it("is due 15 min before, overdue 30 min after", () => {
-    const d = { key: "paracetamol-12:00", medId: "paracetamol" as const, time: "12:00" };
+    const d = { key: "paracetamol-1", medId: "paracetamol" as const, slot: 1, time: "12:00" };
     expect(statusOf(d, null, 11 * 60 + 44)).toBe("upcoming");
     expect(statusOf(d, null, 11 * 60 + 45)).toBe("due");
     expect(statusOf(d, null, 12 * 60 + 29)).toBe("due");
     expect(statusOf(d, null, 12 * 60 + 30)).toBe("overdue");
   });
 
-  it("derives slot status from the append-only log, honouring retractions", () => {
-    const at = new Date(2026, 9, 11, 12, 5).getTime();
-    const given = ev({ at, medId: "paracetamol", slotTime: "12:00" });
-    const sched = scheduleForDay({ paracetamol: true }, 5);
-    let rows = dayStatuses(sched, [given], "2026-10-11", 13 * 60);
-    expect(rows.find((r) => r.time === "12:00")!.status).toBe("given");
-    expect(rows.find((r) => r.time === "06:00")!.status).toBe("overdue");
-
-    const undo = ev({ at: at + 1000, type: "retracted", medId: "paracetamol", slotTime: "12:00", retracts: given.id });
-    rows = dayStatuses(sched, [given, undo], "2026-10-11", 13 * 60);
-    expect(rows.find((r) => r.time === "12:00")!.status).toBe("overdue");
-    expect(activeEvents([given, undo])).toHaveLength(0);
-
-    // A different day's record does not leak across midnight.
-    expect(slotRecord([given], "2026-10-12", "paracetamol", "12:00")).toBeNull();
+  it("honours retractions and keeps days separate", () => {
+    const g = given("paracetamol", 0, at(8));
+    const undo = ev({ at: at(8, 1), type: "retracted", medId: "paracetamol", slotIndex: 0, slotTime: null, slotDate: DAY, retracts: g.id });
+    const rows = daySchedule({ paracetamol: true }, 4, [g, undo], DAY, 9 * 60);
+    expect(rows[0].status).toBe("overdue");
+    expect(times(rows, "paracetamol")).toEqual(["06:00", "12:00", "18:00"]);
+    expect(activeEvents([g, undo])).toHaveLength(0);
+    expect(daySchedule({ paracetamol: true }, 4, [g], "2026-10-12", 0)[0].status).toBe("upcoming");
   });
 
   it("stamps every event with the rule version", () => {

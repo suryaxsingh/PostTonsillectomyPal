@@ -10,8 +10,10 @@ export interface DoseEvent {
   id: string;
   type: "given" | "skipped" | "retracted";
   medId: MedId;
-  /** "HH:MM" scheduled slot, or null for PRN doses. */
+  /** "HH:MM" the dose was scheduled for when recorded, or null for PRN doses. */
   slotTime: string | null;
+  /** Position of the dose in that medicine's day (0 = first dose). Absent for PRN. */
+  slotIndex?: number;
   /** Local date key of the schedule day the event belongs to. */
   slotDate: string;
   /** Epoch ms when the parent recorded it. */
@@ -36,17 +38,6 @@ export function makeEvent(e: NewDoseEvent): DoseEvent {
 export function activeEvents(events: DoseEvent[]): DoseEvent[] {
   const retracted = new Set(events.filter((e) => e.type === "retracted" && e.retracts).map((e) => e.retracts));
   return events.filter((e) => e.type !== "retracted" && !retracted.has(e.id));
-}
-
-/** Latest active record for a scheduled slot, if any. */
-export function slotRecord(events: DoseEvent[], slotDate: string, medId: MedId, slotTime: string): DoseEvent | null {
-  let found: DoseEvent | null = null;
-  for (const e of activeEvents(events)) {
-    if (e.slotDate === slotDate && e.medId === medId && e.slotTime === slotTime) {
-      if (!found || e.at >= found.at) found = e;
-    }
-  }
-  return found;
 }
 
 /** Active "given" events for a medicine within the last `hours` before `now`. */

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { calcDose, parseWeight, type CalculatedDose, type FormChoice } from "../domain/dose";
 import { makeEvent, safetyCheck, type DoseEvent, type SafetyCheck } from "../domain/events";
 import { MED_ORDER, type MedId } from "../domain/rules";
-import { dayStatuses, scheduleForDay, selectedMeds, type DoseWithStatus, type ScheduledDose } from "../domain/schedule";
+import { daySchedule, selectedMeds, type DoseWithStatus, type ScheduledDose } from "../domain/schedule";
 import { dateKey, daysSinceSurgery, minutesOfDay, painSlotOf, postOpDay, type PainSlot } from "../domain/time";
 import { currentPermission, type Perm } from "./notifications";
 import type { Modal, PainEntry, Persisted, Screen, Tab, Ui } from "./types";
@@ -175,7 +175,7 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
       childName: p.nickname.trim() || "your child",
       selectedIds: ids,
       doses,
-      todays: dayStatuses(scheduleForDay(p.selected, day), p.events, today, nowMin),
+      todays: daySchedule(p.selected, day, p.events, today, nowMin),
       oxyInPlan: ids.includes("oxycodone"),
       oxySafety: safetyCheck(p.events, "oxycodone", now),
       painSlotNow: painSlotOf(now),
@@ -210,6 +210,7 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
         type,
         medId: dose.medId,
         slotTime: dose.time,
+        slotIndex: dose.slot,
         slotDate: dateKey(at),
         at,
         doseMg: type === "given" ? (calc?.doseMg ?? null) : null,
@@ -230,6 +231,7 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
         type: "retracted",
         medId: target.medId,
         slotTime: target.slotTime,
+        slotIndex: target.slotIndex,
         slotDate: target.slotDate,
         at,
         doseMg: null,

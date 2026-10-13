@@ -31,8 +31,12 @@ export interface MedRule {
   freq: "QID" | "TDS" | "BD" | "OD" | "PRN";
   /** Plain-English frequency shown to parents (no QID/TDS/BD abbreviations). */
   freqLabel: string;
-  /** Fixed daily times, "HH:MM", 24h. Empty for PRN. */
-  times: string[];
+  /**
+   * Default time of the first dose of the day ("HH:MM", 24h), used only when no
+   * earlier dose carries over. Later doses follow minIntervalHours after the
+   * previous dose was actually given. Null for PRN.
+   */
+  firstTime: string | null;
   scheduleType: ScheduleType;
   /** For selected_days medicines: post-op days the dose is given on. */
   postOpDays?: number[];
@@ -53,7 +57,7 @@ export const RULES: Record<MedId, MedRule> = {
     minIntervalHours: 6,
     freq: "QID",
     freqLabel: "4 times a day",
-    times: ["06:00", "12:00", "18:00", "22:00"],
+    firstTime: "06:00",
     scheduleType: "regular",
     daysLabel: "Day 0–14",
     concs: [
@@ -78,7 +82,7 @@ export const RULES: Record<MedId, MedRule> = {
     minIntervalHours: 8,
     freq: "TDS",
     freqLabel: "3 times a day",
-    times: ["08:00", "14:00", "20:00"],
+    firstTime: "08:00",
     scheduleType: "regular",
     daysLabel: "As prescribed",
     concs: [
@@ -103,7 +107,7 @@ export const RULES: Record<MedId, MedRule> = {
     minIntervalHours: 12,
     freq: "BD",
     freqLabel: "2 times a day",
-    times: ["08:00", "20:00"],
+    firstTime: "08:00",
     scheduleType: "regular",
     daysLabel: "As prescribed",
     concs: [
@@ -126,7 +130,7 @@ export const RULES: Record<MedId, MedRule> = {
     minIntervalHours: 24,
     freq: "OD",
     freqLabel: "Once a day",
-    times: ["08:00"],
+    firstTime: "08:00",
     scheduleType: "selected_days",
     postOpDays: [3, 5, 7],
     daysLabel: "Day 3, 5, 7",
@@ -151,7 +155,7 @@ export const RULES: Record<MedId, MedRule> = {
     minIntervalHours: 6,
     freq: "PRN",
     freqLabel: "Only if needed",
-    times: [],
+    firstTime: null,
     scheduleType: "prn",
     daysLabel: "Limited / local",
     concs: [

@@ -170,3 +170,13 @@ describe("SOS", () => {
     expect(screen.getByText("Day 5")).toBeTruthy();
   });
 });
+
+describe("tablets and capsules", () => {
+  it("show mg doses only, with no 'concentration not confirmed' warning", () => {
+    const forms = { ...confirmedApp.forms!, paracetamol: { form: "tablet" as const, conc: null }, ibuprofen: { form: "liquid" as const, conc: null } };
+    setup({ ...confirmedApp, screen: "plan", planConfirmed: false, forms, selected: { paracetamol: true, ibuprofen: true } });
+    expect(screen.getByText("277 mg")).toBeTruthy();
+    // Only the liquid with no concentration (ibuprofen) gets the warning.
+    expect(screen.getAllByText("mL dose not shown — concentration not confirmed")).toHaveLength(1);
+  });
+});

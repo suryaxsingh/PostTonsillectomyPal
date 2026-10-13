@@ -68,7 +68,9 @@ export function OxyBlock({ detailed = false }: { detailed?: boolean }) {
       ? "Enter a weight to see the dose"
       : calc.doseMl !== null
         ? calc.doseMl + " mL"
-        : "mL dose not shown — concentration not confirmed";
+        : calc.form === "liquid"
+          ? "mL dose not shown — concentration not confirmed"
+          : "";
   const give = () => openModal({ kind: s.blocked ? "oxyBlocked" : "oxy" });
   const alt = () => (d.oxyInPlan || !d.hasWeight ? go("childSetup") : openModal({ kind: "editMeds" }));
   const count = s.countIn24h + " of " + s.max + " doses recorded in the last 24 hours";
@@ -80,7 +82,11 @@ export function OxyBlock({ detailed = false }: { detailed?: boolean }) {
         <>
           <div style={{ font: "800 19px/1.15 var(--font)", letterSpacing: "-.02em", marginBottom: 10 }}>{headline}</div>
           <div style={{ font: "800 26px/1 var(--font)", letterSpacing: "-.03em" }}>{doseShown}</div>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--color-accent-700)", margin: "5px 0 12px" }}>{mlShown}</div>
+          {mlShown ? (
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--color-accent-700)", margin: "5px 0 12px" }}>{mlShown}</div>
+          ) : (
+            <div style={{ height: 12 }} />
+          )}
           <div className="grid-2 mb-12">
             <div>
               <div className="mini-label">Max per dose</div>

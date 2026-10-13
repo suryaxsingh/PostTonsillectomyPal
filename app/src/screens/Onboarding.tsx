@@ -367,9 +367,11 @@ function Plan() {
                 <div className={"plan-tag" + (prn ? " prn" : "")}>{r.freqLabel}</div>
               </div>
               <div className="big mb-6">{c ? c.doseMg + " mg" : "—"}</div>
-              <div className="mb-12" style={{ fontSize: 14, fontWeight: 700, color: c?.doseMl ? "var(--brand-sage)" : "var(--color-accent-700)" }}>
-                {!c ? "Dose needs a weight" : c.doseMl !== null ? c.doseMl + " mL" : "mL dose not shown — concentration not confirmed"}
-              </div>
+              {(!c || c.form === "liquid") && (
+                <div className="mb-12" style={{ fontSize: 14, fontWeight: 700, color: c?.doseMl ? "var(--brand-sage)" : "var(--color-accent-700)" }}>
+                  {!c ? "Dose needs a weight" : c.doseMl !== null ? c.doseMl + " mL" : "mL dose not shown — concentration not confirmed"}
+                </div>
+              )}
               <div className="grid-2">
                 <div>
                   <div className="mini-label">Max per dose</div>

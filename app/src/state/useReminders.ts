@@ -5,7 +5,8 @@ import { fmt12, toMin } from "../domain/time";
 import { notify } from "./notifications";
 import { useApp } from "./store";
 
-const PAIN_TIMES = { am: 9 * 60, pm: 17 * 60 };
+/** When each pain check-in reminder fires (minutes after midnight). */
+export const PAIN_REMINDER_TIMES = { morning: 9 * 60, afternoon: 14 * 60, evening: 19 * 60 };
 
 /** Fires browser notifications for due/overdue doses, the pre-wake reminder and pain check-ins. */
 export function useReminders() {
@@ -36,9 +37,9 @@ export function useReminders() {
       }
     }
 
-    if (p.reminders.pain && !d.painNow) {
-      const half = d.nowMin < 12 * 60 ? "am" : "pm";
-      if (d.nowMin >= PAIN_TIMES[half]) once("pain-" + half, "Pain check-in", "How sore is " + d.childName + " right now?");
+    const slot = d.painSlotNow;
+    if (p.reminders.pain && !d.painToday[slot] && d.nowMin >= PAIN_REMINDER_TIMES[slot]) {
+      once("pain-" + slot, "Pain check-in", "How sore is " + d.childName + " right now?");
     }
   }, [d, p.reminders, p.screen, notifyPerm]);
 }

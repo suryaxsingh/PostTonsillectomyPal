@@ -17,7 +17,7 @@ export function Settings() {
     ["due", "Medicine due"],
     ["notTicked", "Not ticked off"],
     ["wake", "Before wake-up", wakeAt],
-    ["pain", "Pain check-in", "9 am · 5 pm"],
+    ["pain", "Pain check-ins", "9 am · 2 pm · 7 pm"],
   ];
 
   return (
@@ -27,7 +27,7 @@ export function Settings() {
       </button>
 
       <Group title="Child profile">
-        <Kv k="Nickname" v={p.nickname.trim() || "—"} />
+        <Kv k="Name" v={p.nickname.trim() || "—"} />
         <Kv k="Age" v={p.age ? p.age + " years" : "—"} />
         <Kv k="Weight" v={d.hasWeight ? d.weightKg + " kg" : "not recorded"} />
         <Kv k="Surgery date" v={p.surgeryDate ? dateLabel(parseDateKey(p.surgeryDate)) : "—"} />
@@ -111,11 +111,12 @@ function minus60(t: string) {
 /** The full append-only log, including retractions, for sharing with a clinician. */
 function exportLog(p: ReturnType<typeof useApp>["p"]) {
   const head = ["recorded_at", "type", "medicine", "scheduled_date", "scheduled_time", "dose_mg", "dose_ml", "weight_kg", "rule_version", "plan_version", "event_id", "retracts"];
+  const csv = (cells: (string | number)[]) => cells.map((c) => (/[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : String(c))).join(",");
   const rows = p.events.map((e) =>
-    [new Date(e.at).toISOString(), e.type, e.medId, e.slotDate, e.slotTime ?? "PRN", e.doseMg ?? "", e.doseMl ?? "", e.weightKg ?? "", e.ruleVersion, e.planVersion, e.id, e.retracts ?? ""].join(","),
+    csv([new Date(e.at).toISOString(), e.type, e.medId, e.slotDate, e.slotTime ?? "PRN", e.doseMg ?? "", e.doseMl ?? "", e.weightKg ?? "", e.ruleVersion, e.planVersion, e.id, e.retracts ?? ""]),
   );
-  const pain = p.pain.map((x) => [new Date(x.at).toISOString(), "pain", "", x.date, x.half, "", "", "", "", "", "score " + x.score, ""].join(","));
-  const blob = new Blob([[head.join(","), ...rows, ...pain].join("\n")], { type: "text/csv" });
+  const pain = p.pain.map((x) => csv([new Date(x.at).toISOString(), "pain", "", x.date, x.slot, "", "", "", "", "", "score " + x.score + (x.note ? " note: " + x.note : ""), ""]));
+  const blob = new Blob([[csv(head), ...rows, ...pain].join("\n")], { type: "text/csv" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "dose-record-" + new Date().toISOString().slice(0, 10) + ".csv";

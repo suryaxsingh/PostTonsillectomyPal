@@ -1,23 +1,20 @@
 import { DoseRows, OxyBlock } from "../components/Doses";
-import { AlertIcon, ClockIcon, Face } from "../components/Icons";
-import { DAYS, PAIN_COPY, PAIN_SHORT } from "../domain/content";
+import { AlertIcon, ClockIcon } from "../components/Icons";
+import { PainCheckIn } from "../components/PainCheckIn";
+import { DAYS } from "../domain/content";
 import { doseLabel } from "../domain/dose";
 import { RULES } from "../domain/rules";
 import { dateLabel, fmt12, toMin } from "../domain/time";
 import { useApp } from "../state/store";
 
 export function Home() {
-  const { d, ui, setUi, goTab, openModal, savePain } = useApp();
+  const { d, setUi, goTab, openModal } = useApp();
   const content = DAYS[d.day] ?? DAYS[0];
   const pending = d.todays.filter((x) => x.status === "due" || x.status === "upcoming");
   const next = pending[0] ?? null;
   const overdue = d.todays.filter((x) => x.status === "overdue");
   const givenN = d.todays.filter((x) => x.status === "given").length;
 
-  const savedScore = d.painNow?.score ?? null;
-  const shown = ui.painDraft ?? savedScore;
-  const isSaved = ui.painDraft === null && savedScore !== null;
-  const painColor = shown === null ? "" : shown >= 4 ? "var(--color-accent)" : shown >= 2 ? "var(--pain-mid)" : "var(--brand-sage)";
 
   return (
     <>
@@ -96,47 +93,7 @@ export function Home() {
         <DoseRows />
       </div>
 
-      <div className="section">
-        <div className="caps" style={{ marginBottom: 4 }}>
-          Pain check-in
-        </div>
-        <div style={{ font: "800 20px/1.15 var(--font)", letterSpacing: "-.02em", marginBottom: 14 }}>How sore is {d.childName} today?</div>
-        <div className="faces" role="radiogroup" aria-label="Pain level">
-          {PAIN_SHORT.map((label, i) => (
-            <button
-              key={label}
-              type="button"
-              role="radio"
-              aria-checked={shown === i}
-              aria-label={PAIN_COPY[i].label}
-              className={"face" + (shown === i ? " on" : "")}
-              onClick={() => setUi({ painDraft: i })}
-            >
-              <Face level={i} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-        {shown !== null && (
-          <>
-            <div className="mt-14" style={{ borderLeft: "4px solid " + painColor, background: "var(--color-surface)", borderRadius: "0 10px 10px 0", padding: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>{PAIN_COPY[shown].label}</div>
-              <div className="body-sm">{PAIN_COPY[shown].msg}</div>
-              <div style={{ fontSize: 12, lineHeight: 1.45, marginTop: 8, color: "var(--color-accent-700)", fontWeight: 700 }}>
-                If there is any fresh bleeding, use SOS or call 000.
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn btn-sm mt-12"
-              style={{ background: isSaved ? "var(--brand-sage)" : "var(--color-text)", color: "#fff" }}
-              onClick={() => !isSaved && savePain(shown)}
-            >
-              {isSaved ? "Pain check-in saved ✓" : "Save pain check-in"}
-            </button>
-          </>
-        )}
-      </div>
+      <PainCheckIn />
 
       <div className="section">
         <button type="button" className="bleed-banner" onClick={() => goTab("emergency")}>

@@ -237,9 +237,9 @@ function build(m: Modal, app: ReturnType<typeof useApp>): Spec {
     }
     case "notSure":
       return {
-        kicker: "Before you continue",
-        title: "Only select prescribed medicines",
-        body: "If you are unsure, check your discharge paperwork or contact your pharmacist, GP, or treating team.",
+        kicker: "Not sure?",
+        title: "Contact your GP, treating team or anaesthetist",
+        body: "Only select medicines that were prescribed. If you are unsure, check your discharge paperwork or contact your GP, treating team or anaesthetist.",
         actions: [
           { label: "Go back", tone: "ink", onTap: closeModal },
           { label: "Continue without medicines", tone: "outline", onTap: () => (set({ selected: {}, planConfirmed: false }), go("medForm")) },

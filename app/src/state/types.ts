@@ -2,6 +2,7 @@ import type { FormChoice } from "../domain/dose";
 import type { DoseEvent } from "../domain/events";
 import type { MedId } from "../domain/rules";
 import type { ScheduledDose } from "../domain/schedule";
+import type { PainSlot } from "../domain/time";
 
 export type Screen =
   | "splash"
@@ -42,9 +43,11 @@ export interface Reminders {
 
 export interface PainEntry {
   date: string;
-  half: "am" | "pm";
+  slot: PainSlot;
   score: number;
   at: number;
+  /** Optional private note. */
+  note?: string;
 }
 
 /** Everything that survives a reload. */
@@ -95,4 +98,9 @@ export interface Ui {
   concerns: Record<string, boolean>;
   /** Face picked but not yet saved. */
   painDraft: number | null;
+  /** Slot the parent tapped; null = the current time-of-day slot. */
+  painSlot: PainSlot | null;
+  /** Unsaved note text; null = use the saved note for the slot. */
+  painNote: string | null;
+  showPainLog: boolean;
 }

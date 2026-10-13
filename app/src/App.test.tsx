@@ -14,11 +14,9 @@ function setup(patch: Partial<Persisted>) {
   );
 }
 
-const daysAgo = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return dateKey(d);
-};
+/** Tests run on a fixed clock: 11 Oct 2026, 1:10 pm. */
+const NOW = new Date(2026, 9, 11, 13, 10);
+const daysAgo = (n: number) => dateKey(new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - n));
 
 const confirmedApp: Partial<Persisted> = {
   screen: "app",
@@ -42,7 +40,7 @@ const confirmedApp: Partial<Persisted> = {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date(2026, 9, 11, 13, 10));
+  vi.setSystemTime(NOW);
   localStorage.clear();
 });
 afterEach(() => {
@@ -134,5 +132,41 @@ describe("plan invalidation", () => {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY)!) as Persisted;
     expect(saved.planConfirmed).toBe(false);
     expect(saved.screen).toBe("childSetup");
+  });
+});
+
+describe("pain check-in", () => {
+  it("saves the current slot (afternoon) with a private note, and lists it in the private log", () => {
+    setup(confirmedApp);
+    expect(screen.getByRole("tab", { name: /Afternoon/ }).getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(screen.getByRole("radio", { name: "Bad pain" }));
+    fireEvent.change(screen.getByLabelText("Private note (optional)"), { target: { value: "sore, ate yoghurt" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save afternoon check-in" }));
+    expect(screen.getByRole("button", { name: "Afternoon check-in saved ✓" })).toBeTruthy();
+
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY)!) as Persisted;
+    expect(saved.pain).toEqual([expect.objectContaining({ slot: "afternoon", score: 3, note: "sore, ate yoghurt" })]);
+
+    fireEvent.click(screen.getByRole("button", { name: /View private pain log/ }));
+    expect(screen.getByText("Afternoon:").parentElement!.textContent).toBe("Afternoon: sore, ate yoghurt");
+  });
+});
+
+describe("onboarding back button", () => {
+  it("steps back through the flow", () => {
+    setup({ screen: "surgery" });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("Confirm weight")).toBeTruthy();
+  });
+});
+
+describe("SOS", () => {
+  it("can be closed, and offers an information path", () => {
+    setup({ ...confirmedApp, tab: "emergency" });
+    fireEvent.click(screen.getByRole("button", { name: "I'm not worried but want more information" }));
+    expect(screen.getByText("Common questions")).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: "SOS" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Close SOS" }));
+    expect(screen.getByText("Day 5")).toBeTruthy();
   });
 });

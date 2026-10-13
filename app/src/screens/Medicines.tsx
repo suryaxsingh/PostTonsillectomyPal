@@ -1,3 +1,4 @@
+import { AnaesthetistNote } from "../components/bits";
 import { DoseRows, OxyBlock } from "../components/Doses";
 import { doseLabel } from "../domain/dose";
 import { activeEvents } from "../domain/events";
@@ -19,6 +20,7 @@ export function Medicines() {
         <div style={{ fontSize: 13, lineHeight: 1.4 }}>
           {d.hasWeight ? "Calculated using your child's weight: " + d.weightKg + " kg" : "No weight recorded yet — doses cannot be calculated. Enter it to see doses."}
         </div>
+        <AnaesthetistNote className="mt-10" />
         <button
           type="button"
           className="btn-link red"
@@ -58,7 +60,7 @@ export function Medicines() {
                   <span className="stack" style={{ gap: 3 }}>
                     <span style={{ font: "700 15.5px/1.2 var(--font)" }}>{r.name}</span>
                     <span style={{ fontSize: 12, opacity: 0.7, fontWeight: 600 }}>
-                      {doseLabel(c)} · {r.freq}
+                      {doseLabel(c)} · {r.freqLabel}
                     </span>
                   </span>
                   <span style={{ fontSize: 18, fontWeight: 800, flex: "none" }} aria-hidden="true">

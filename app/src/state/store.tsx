@@ -3,7 +3,7 @@ import { calcDose, parseWeight, type CalculatedDose, type FormChoice } from "../
 import { makeEvent, safetyCheck, type DoseEvent, type SafetyCheck } from "../domain/events";
 import { MED_ORDER, type MedId } from "../domain/rules";
 import { dayStatuses, scheduleForDay, selectedMeds, type DoseWithStatus, type ScheduledDose } from "../domain/schedule";
-import { dateKey, daysSinceSurgery, halfOfDay, minutesOfDay, postOpDay } from "../domain/time";
+import { dateKey, daysSinceSurgery, minutesOfDay, painSlotOf, postOpDay, type PainSlot } from "../domain/time";
 import { currentPermission, type Perm } from "./notifications";
 import type { Modal, PainEntry, Persisted, Screen, Tab, Ui } from "./types";
 
@@ -50,6 +50,9 @@ const DEFAULT_UI: Ui = {
   emStage: "question",
   concerns: {},
   painDraft: null,
+  painSlot: null,
+  painNote: null,
+  showPainLog: false,
 };
 
 export function loadPersisted(): Persisted {
@@ -60,6 +63,11 @@ export function loadPersisted(): Persisted {
     const saved = JSON.parse(raw) as Partial<Persisted>;
     if (saved.v !== 2) return base;
     const merged: Persisted = { ...base, ...saved, forms: { ...DEFAULT_FORMS, ...(saved.forms ?? {}) } };
+    // Older builds stored pain as am/pm halves.
+    merged.pain = (merged.pain ?? []).map((e) => {
+      const old = e as PainEntry & { half?: "am" | "pm" };
+      return old.slot ? e : { ...e, slot: old.half === "pm" ? "afternoon" : "morning" };
+    });
     // Returning parent lands straight on Home at the current recovery day.
     if (merged.planConfirmed || merged.screen === "app") {
       merged.screen = "app";
@@ -93,7 +101,9 @@ export interface Derived {
   todays: DoseWithStatus[];
   oxyInPlan: boolean;
   oxySafety: SafetyCheck;
-  painNow: PainEntry | null;
+  painSlotNow: PainSlot;
+  /** Today's saved pain check-ins by slot. */
+  painToday: Partial<Record<PainSlot, PainEntry>>;
 }
 
 interface Ctx {
@@ -111,7 +121,7 @@ interface Ctx {
   recordScheduled: (dose: ScheduledDose, type: "given" | "skipped") => void;
   retract: (event: DoseEvent) => void;
   recordOxy: () => void;
-  savePain: (score: number) => void;
+  savePain: (score: number, slot: PainSlot, note: string) => void;
   resetAll: () => void;
 }
 
@@ -154,7 +164,6 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
       CalculatedDose | null
     >;
     const nowMin = minutesOfDay(now);
-    const half = halfOfDay(now);
     return {
       now,
       today,
@@ -169,7 +178,8 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
       todays: dayStatuses(scheduleForDay(p.selected, day), p.events, today, nowMin),
       oxyInPlan: ids.includes("oxycodone"),
       oxySafety: safetyCheck(p.events, "oxycodone", now),
-      painNow: p.pain.find((e) => e.date === today && e.half === half) ?? null,
+      painSlotNow: painSlotOf(now),
+      painToday: Object.fromEntries(p.pain.filter((e) => e.date === today).map((e) => [e.slot, e])),
     };
   }, [p, now]);
 
@@ -258,14 +268,14 @@ export function AppProvider({ children, initial }: { children: ReactNode; initia
     setUiState((u) => ({ ...u, modal: null }));
   }, [p.events, p.planVersion, d.doses.oxycodone, d.weightKg]);
 
-  const savePain = useCallback((score: number) => {
+  const savePain = useCallback((score: number, slot: PainSlot, note: string) => {
     const at = Date.now();
-    const entry: PainEntry = { date: dateKey(at), half: halfOfDay(at), score, at };
+    const entry: PainEntry = { date: dateKey(at), slot, score, at, ...(note.trim() ? { note: note.trim() } : {}) };
     setP((prev) => ({
       ...prev,
-      pain: [...prev.pain.filter((x) => !(x.date === entry.date && x.half === entry.half)), entry],
+      pain: [...prev.pain.filter((x) => !(x.date === entry.date && x.slot === entry.slot)), entry],
     }));
-    setUiState((u) => ({ ...u, painDraft: null }));
+    setUiState((u) => ({ ...u, painDraft: null, painNote: null }));
   }, []);
 
   const resetAll = useCallback(() => {

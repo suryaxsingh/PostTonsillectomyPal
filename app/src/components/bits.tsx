@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { InfoIcon } from "./Icons";
 
 export function Tick({ on, variant }: { on: boolean; variant?: "square" | "sage" }) {
   return (
@@ -22,6 +23,17 @@ export function Kv({ k, v }: { k: ReactNode; v: ReactNode }) {
     <div className="kv">
       <span>{k}</span>
       <span>{v}</span>
+    </div>
+  );
+}
+
+export function AnaesthetistNote({ className }: { className?: string }) {
+  return (
+    <div className={"info-note" + (className ? " " + className : "")}>
+      <InfoIcon />
+      <span>
+        <strong>Speak to your anaesthetist</strong> about pain scheduling and the best times to give each dose.
+      </span>
     </div>
   );
 }

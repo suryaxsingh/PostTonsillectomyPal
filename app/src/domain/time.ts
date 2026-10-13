@@ -57,6 +57,15 @@ export function dateLabel(d: Date | number): string {
   return new Date(d).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "long" });
 }
 
-export function halfOfDay(d: Date | number): "am" | "pm" {
-  return minutesOfDay(d) < 12 * 60 ? "am" : "pm";
+export type PainSlot = "morning" | "afternoon" | "evening";
+export const PAIN_SLOTS: [PainSlot, string][] = [
+  ["morning", "Morning"],
+  ["afternoon", "Afternoon"],
+  ["evening", "Evening"],
+];
+
+/** Morning before 12:00, afternoon 12:00–17:00, evening after 17:00. */
+export function painSlotOf(d: Date | number): PainSlot {
+  const m = minutesOfDay(d);
+  return m < 12 * 60 ? "morning" : m < 17 * 60 ? "afternoon" : "evening";
 }

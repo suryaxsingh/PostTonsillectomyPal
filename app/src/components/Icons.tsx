@@ -1,4 +1,4 @@
-import type { ReactElement, SVGProps } from "react";
+import type { SVGProps } from "react";
 
 type P = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -64,47 +64,50 @@ export const PhoneIcon = (p: P) => (
   </Svg>
 );
 
-/** One face construction across the scale: only the mouth and brows change. */
-const FACE_PARTS: ReactElement[] = [
-  <>
-    <circle cx="11.9" cy="13.6" r="1.25" fill="currentColor" stroke="none" />
-    <circle cx="20.1" cy="13.6" r="1.25" fill="currentColor" stroke="none" />
-    <path d="M10.7 19.1q5.3 5.4 10.6 0" />
-  </>,
-  <>
-    <circle cx="11.9" cy="13.6" r="1.25" fill="currentColor" stroke="none" />
-    <circle cx="20.1" cy="13.6" r="1.25" fill="currentColor" stroke="none" />
-    <path d="M11.3 20.5q4.7 3.2 9.4 0" />
-  </>,
-  <>
-    <circle cx="11.9" cy="13.6" r="1.25" fill="currentColor" stroke="none" />
-    <circle cx="20.1" cy="13.6" r="1.25" fill="currentColor" stroke="none" />
-    <path d="M11.3 21.2h9.4" />
-  </>,
-  <>
-    <path d="M9.7 12.4 13.3 11.1M22.3 12.4 18.7 11.1" />
-    <circle cx="11.9" cy="14.6" r="1.25" fill="currentColor" stroke="none" />
-    <circle cx="20.1" cy="14.6" r="1.25" fill="currentColor" stroke="none" />
-    <path d="M11.4 22.3q4.6-3.4 9.2 0" />
-  </>,
-  <>
-    <path d="M9.7 12.4 13.3 11.1M22.3 12.4 18.7 11.1" />
-    <circle cx="11.9" cy="14.6" r="1.25" fill="currentColor" stroke="none" />
-    <circle cx="20.1" cy="14.6" r="1.25" fill="currentColor" stroke="none" />
-    <path d="M11.1 23.3q4.9-5.2 9.8 0" />
-  </>,
-  <>
-    <path d="M9.5 12.8 13.5 10.9M22.5 12.8 18.5 10.9" />
-    <path d="M10.6 15q1.3-1.4 2.6 0M19.4 15q1.3-1.4 2.6 0" />
-    <ellipse cx="16" cy="21.7" rx="3.9" ry="3.3" />
-  </>,
+const FACES = [
+  { brows: "", eyes: "M11.9 13.6h.01M20.1 13.6h.01", mouth: "M10.7 19.1q5.3 5.4 10.6 0" },
+  { brows: "", eyes: "M11.9 13.6h.01M20.1 13.6h.01", mouth: "M11.3 20.5q4.7 3.2 9.4 0" },
+  { brows: "", eyes: "M11.9 13.6h.01M20.1 13.6h.01", mouth: "M11.3 21.2h9.4" },
+  { brows: "M9.7 12.4 13.3 11.1M22.3 12.4 18.7 11.1", eyes: "M11.9 14.6h.01M20.1 14.6h.01", mouth: "M11.4 22.3q4.6-3.4 9.2 0" },
+  { brows: "M9.7 12.4 13.3 11.1M22.3 12.4 18.7 11.1", eyes: "M11.9 14.6h.01M20.1 14.6h.01", mouth: "M11.1 23.3q4.9-5.2 9.8 0" },
+  { brows: "M9.5 12.8 13.5 10.9M22.5 12.8 18.5 10.9", eyes: "M10.6 15q1.3-1.4 2.6 0M19.4 15q1.3-1.4 2.6 0", mouth: "M12.1 21.7a3.9 3.3 0 1 0 7.8 0a3.9 3.3 0 1 0-7.8 0", open: true },
 ];
 
-export function Face({ level }: { level: number }) {
+/** One face construction across the scale: only brows, eyes and mouth change. Filled green → red. */
+export function Face({ level, color }: { level: number; color: string }) {
+  const f = FACES[level];
   return (
-    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
-      <circle cx="16" cy="16" r="13" />
-      {FACE_PARTS[level]}
+    <svg width="40" height="40" viewBox="0 0 32 32" fill="none" stroke="#2b2723" strokeWidth="1.9" aria-hidden="true">
+      <circle cx="16" cy="16" r="13.5" fill={color} />
+      {f.brows && <path d={f.brows} />}
+      <path d={f.eyes} strokeWidth={f.open ? 1.9 : 2.8} />
+      <path d={f.mouth} fill={f.open ? "#2b2723" : "none"} />
     </svg>
   );
 }
+
+export const LockIcon = (p: P) => (
+  <Svg size={18} {...p}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </Svg>
+);
+
+export const InfoIcon = (p: P) => (
+  <Svg size={18} {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4M12 8h.01" />
+  </Svg>
+);
+
+export const ChevronLeftIcon = (p: P) => (
+  <Svg size={18} strokeWidth={2.6} {...p}>
+    <path d="m15 18-6-6 6-6" />
+  </Svg>
+);
+
+export const CloseIcon = (p: P) => (
+  <Svg size={20} strokeWidth={2.6} {...p}>
+    <path d="M18 6 6 18M6 6l12 12" />
+  </Svg>
+);

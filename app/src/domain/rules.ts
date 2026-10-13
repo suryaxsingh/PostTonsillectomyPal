@@ -29,6 +29,8 @@ export interface MedRule {
   maxDosesIn24Hours: number;
   minIntervalHours: number;
   freq: "QID" | "TDS" | "BD" | "OD" | "PRN";
+  /** Plain-English frequency shown to parents (no QID/TDS/BD abbreviations). */
+  freqLabel: string;
   /** Fixed daily times, "HH:MM", 24h. Empty for PRN. */
   times: string[];
   scheduleType: ScheduleType;
@@ -44,12 +46,13 @@ export const RULES: Record<MedId, MedRule> = {
     id: "paracetamol",
     name: "Paracetamol / Panadol",
     shortName: "Paracetamol",
-    sub: "Regular pain relief · QID",
+    sub: "Regular pain relief",
     mgPerKg: 15,
     maxSingleDoseMg: 1000,
     maxDosesIn24Hours: 4,
     minIntervalHours: 6,
     freq: "QID",
+    freqLabel: "4 times a day",
     times: ["06:00", "12:00", "18:00", "22:00"],
     scheduleType: "regular",
     daysLabel: "Day 0–14",
@@ -68,12 +71,13 @@ export const RULES: Record<MedId, MedRule> = {
     id: "ibuprofen",
     name: "Ibuprofen / Nurofen",
     shortName: "Ibuprofen",
-    sub: "Anti-inflammatory · TDS",
+    sub: "Anti-inflammatory",
     mgPerKg: 10,
     maxSingleDoseMg: 400,
     maxDosesIn24Hours: 3,
     minIntervalHours: 8,
     freq: "TDS",
+    freqLabel: "3 times a day",
     times: ["08:00", "14:00", "20:00"],
     scheduleType: "regular",
     daysLabel: "As prescribed",
@@ -92,12 +96,13 @@ export const RULES: Record<MedId, MedRule> = {
     id: "celecoxib",
     name: "Celecoxib",
     shortName: "Celecoxib",
-    sub: "Anti-inflammatory · BD",
+    sub: "Anti-inflammatory",
     mgPerKg: 4,
     maxSingleDoseMg: 100,
     maxDosesIn24Hours: 2,
     minIntervalHours: 12,
     freq: "BD",
+    freqLabel: "2 times a day",
     times: ["08:00", "20:00"],
     scheduleType: "regular",
     daysLabel: "As prescribed",
@@ -120,6 +125,7 @@ export const RULES: Record<MedId, MedRule> = {
     maxDosesIn24Hours: 1,
     minIntervalHours: 24,
     freq: "OD",
+    freqLabel: "Once a day",
     times: ["08:00"],
     scheduleType: "selected_days",
     postOpDays: [3, 5, 7],
@@ -144,6 +150,7 @@ export const RULES: Record<MedId, MedRule> = {
     maxDosesIn24Hours: 4,
     minIntervalHours: 6,
     freq: "PRN",
+    freqLabel: "Only if needed",
     times: [],
     scheduleType: "prn",
     daysLabel: "Limited / local",

@@ -10,14 +10,29 @@ export function currentPermission(): Perm {
   return typeof Notification === "undefined" ? "unsupported" : Notification.permission;
 }
 
-export async function requestPermission(): Promise<Perm> {
-  if (typeof Notification === "undefined") return "unsupported";
-  if (Notification.permission !== "default") return Notification.permission;
-  try {
-    return await Notification.requestPermission();
-  } catch {
-    return Notification.permission;
-  }
+/**
+ * Ask for notification permission. Always settles within `timeoutMs`: some
+ * browsers never answer (or only support the old callback form), and the
+ * parent must still get through to Home.
+ */
+export function requestPermission(timeoutMs = 4000): Promise<Perm> {
+  if (typeof Notification === "undefined") return Promise.resolve("unsupported");
+  if (Notification.permission !== "default") return Promise.resolve(Notification.permission);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (p?: NotificationPermission) => {
+      if (done) return;
+      done = true;
+      resolve(p ?? Notification.permission);
+    };
+    setTimeout(() => finish(), timeoutMs);
+    try {
+      const r = Notification.requestPermission(finish);
+      if (r && typeof r.then === "function") r.then(finish, () => finish());
+    } catch {
+      finish();
+    }
+  });
 }
 
 export async function notify(title: string, body: string, tag: string): Promise<void> {

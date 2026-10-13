@@ -50,6 +50,11 @@ export const PAIN_COPY: PainCopy[] = [
 
 export const PAIN_SHORT = ["NONE", "MILD", "SOME", "BAD", "V.BAD", "WORST"];
 
+/** Green → red fills for the six faces (and their log cells). */
+export const PAIN_COLORS = ["#4f9a5b", "#8fb04f", "#e0b93d", "#e39a3c", "#d9673a", "#c0342a"];
+/** Short level names for slot tiles and the private log. */
+export const PAIN_LEVEL = ["No", "Mild", "Some", "Bad", "Very bad", "Worst"];
+
 export const GRAB_GO = ["Discharge paperwork", "Medicines", "Child's Medicare details", "Phone and charger", "Water bottle for parent", "Spare clothes", "Towel or bowl", "Wallet / ID", "Any important medical information"];
 
 export const CONCERNS = ["Breathing difficulty", "Very drowsy or difficult to wake", "Severe pain not controlled", "Unable to take medicine", "I am seriously worried"];
@@ -59,4 +64,4 @@ export const CALL_STEPS = ["Call 000 immediately", "Sit your child upright", "En
 export const WHEN_TO_GET_HELP = ["Fresh bleeding, vomiting blood, or clots — call 000 immediately", "Pain not controlled despite prescribed medicine", "Unable to take medicine or drink", "You are seriously worried"];
 
 export const HOSPITALS: [string, string][] = [["JHH", "John Hunter Hospital"], ["Tamworth", "Tamworth Hospital"], ["Other", "Other"]];
-export const SURGERY_TYPES: [string, string][] = [["tonsillectomy", "Tonsillectomy"], ["adenotonsillectomy", "Adenotonsillectomy"], ["not_sure", "Not sure"]];
+export const SURGERY_TYPES: [string, string][] = [["tonsillectomy", "Tonsillectomy"], ["adenotonsillectomy", "Adenotonsillectomy"], ["tonsil_reduction", "Tonsil reduction"], ["tonsil_reduction_adenoid", "Tonsil reduction + adenoidectomy"], ["not_sure", "Not sure"]];

@@ -1,17 +1,40 @@
 import { Tick } from "../components/bits";
-import { PhoneIcon } from "../components/Icons";
+import { CloseIcon, PhoneIcon } from "../components/Icons";
 import { CALL_STEPS, CONCERNS, GRAB_GO } from "../domain/content";
 import { useApp } from "../state/store";
 
 /** Deliberately firmer than the rest of the app: alert red, 6px radii, no decoration. */
 export function Emergency() {
-  const { p, ui, set, setUi } = useApp();
+  const { goTab } = useApp();
+  return (
+    <div className="em">
+      <div className="em-close">
+        <button type="button" aria-label="Close SOS" onClick={() => goTab("home")}>
+          <CloseIcon />
+        </button>
+      </div>
+      <Stage />
+    </div>
+  );
+}
+
+function GrabGoButton({ className }: { className: string }) {
+  const { setUi } = useApp();
+  return (
+    <button type="button" className={"btn btn-ochre " + className} onClick={() => setUi({ emStage: "grabgo" })}>
+      Grab and go checklist if you're going to the hospital
+    </button>
+  );
+}
+
+function Stage() {
+  const { p, ui, set, setUi, goTab } = useApp();
   const stage = (emStage: typeof ui.emStage) => setUi({ emStage });
 
   if (ui.emStage === "call") {
     return (
-      <div className="em">
-        <div className="em-hero">
+      <>
+        <div className="em-hero mt-10">
           <h2>Call 000 now</h2>
           <div style={{ fontSize: 15, lineHeight: 1.35, fontWeight: 700 }}>Fresh bleeding after tonsillectomy can be serious.</div>
         </div>
@@ -28,17 +51,15 @@ export function Emergency() {
             <PhoneIcon />
             Call 000
           </a>
-          <button type="button" className="btn btn-big-outline mt-10" style={{ fontSize: 14, padding: "18px 20px" }} onClick={() => stage("grabgo")}>
-            Show grab-and-go checklist
-          </button>
+          <GrabGoButton className="mt-10" />
         </div>
-      </div>
+      </>
     );
   }
 
   if (ui.emStage === "concerns") {
     return (
-      <div className="em" style={{ padding: "20px 16px" }}>
+      <div style={{ padding: "4px 16px 20px" }}>
         <button type="button" className="btn-back" onClick={() => stage("question")}>
           ← Back
         </button>
@@ -76,11 +97,11 @@ export function Emergency() {
 
   if (ui.emStage === "grabgo") {
     return (
-      <div className="em" style={{ padding: "20px 16px" }}>
+      <div style={{ padding: "4px 16px 20px" }}>
         <button type="button" className="btn-back" onClick={() => stage("question")}>
           ← Back to Emergency
         </button>
-        <h2 className="h2">Grab-and-go bag</h2>
+        <h2 className="h2">Grab and go checklist if you're going to the hospital</h2>
         <div className="list">
           {GRAB_GO.map((label) => {
             const on = !!p.grabGo[label];
@@ -100,7 +121,7 @@ export function Emergency() {
             );
           })}
         </div>
-        <div className="card mt-18" style={{ padding: 14, fontSize: 13, lineHeight: 1.5, borderRadius: "var(--radius-em)" }}>
+        <div className="ochre-note mt-18">
           During the high-risk recovery period, stay within about 1 hour of an appropriate hospital, such as John Hunter Hospital, Tamworth Hospital, your
           treating hospital, or a suitable emergency department.
         </div>
@@ -109,7 +130,7 @@ export function Emergency() {
   }
 
   return (
-    <div className="em" style={{ padding: "20px 16px" }}>
+    <div style={{ padding: "4px 16px 20px" }}>
       <h2 className="h2" style={{ marginBottom: 18 }}>
         Is your child bleeding from the mouth, vomiting blood, or bringing up clots?
       </h2>
@@ -119,11 +140,12 @@ export function Emergency() {
       <button type="button" className="btn btn-big-outline mt-10" onClick={() => stage("concerns")}>
         No, but I am worried
       </button>
+      <button type="button" className="btn btn-info mt-10" onClick={() => goTab("questions")}>
+        I'm not worried but want more information
+      </button>
       <div className="rule mt-18" />
       <div className="mt-16 body-sm">Fresh bleeding after tonsillectomy can be serious. Do not wait to see if it settles.</div>
-      <button type="button" className="btn btn-outline compact mt-16" onClick={() => stage("grabgo")}>
-        Grab-and-go checklist
-      </button>
+      <GrabGoButton className="mt-16" />
     </div>
   );
 }

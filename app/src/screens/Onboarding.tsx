@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
-import { CheckBox, Tick } from "../components/bits";
+import { AnaesthetistNote, CheckBox, Tick } from "../components/bits";
+import { ChevronLeftIcon } from "../components/Icons";
 import { HOSPITALS, SURGERY_TYPES } from "../domain/content";
 import { parseWeight, weightLooksImplausible, type FormChoice } from "../domain/dose";
 import { MED_ORDER, RULES, RULE_VERSION, type MedForm, type MedId } from "../domain/rules";
-import { dateKey, fmt12 } from "../domain/time";
+import { dateKey } from "../domain/time";
 import { requestPermission } from "../state/notifications";
 import { useApp } from "../state/store";
-import { ONBOARDING } from "../state/types";
+import { ONBOARDING, type Screen } from "../state/types";
 
 const FORMS: [MedForm, string][] = [
   ["liquid", "Liquid"],
@@ -15,8 +16,11 @@ const FORMS: [MedForm, string][] = [
   ["other", "Not sure"],
 ];
 
+/** Back steps through the flow in this order; welcome goes back to the splash. */
+const BACK_ORDER: Screen[] = ["splash", ...ONBOARDING];
+
 export function Onboarding() {
-  const { p } = useApp();
+  const { p, go } = useApp();
   const idx = ONBOARDING.indexOf(p.screen);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => { if (scroller.current) scroller.current.scrollTop = 0; }, [p.screen]);
@@ -27,6 +31,12 @@ export function Onboarding() {
         {ONBOARDING.map((s, i) => (
           <div key={s} className={i <= idx ? "on" : ""} />
         ))}
+      </div>
+      <div style={{ flex: "none", padding: "0 12px 6px" }}>
+        <button type="button" className="back-btn" onClick={() => go(BACK_ORDER[Math.max(0, BACK_ORDER.indexOf(p.screen) - 1)])}>
+          <ChevronLeftIcon />
+          Back
+        </button>
       </div>
       <div className="scroll onb" ref={scroller}>
         {p.screen === "welcome" && <Welcome />}
@@ -110,7 +120,7 @@ function Disclaimer() {
 }
 
 function EmergencyWarning() {
-  const { go, goTab } = useApp();
+  const { go } = useApp();
   return (
     <>
       <Head kicker="Step 2 of 8" title="Important emergency advice" rule={false} />
@@ -122,9 +132,6 @@ function EmergencyWarning() {
       <p className="body mb-24">Do not wait to see if it settles. Fresh bleeding after tonsillectomy can be serious.</p>
       <button type="button" className="btn btn-ink" onClick={() => go("childSetup")}>
         I understand
-      </button>
-      <button type="button" className="btn-link red mt-10" onClick={() => goTab("emergency")}>
-        View emergency instructions
       </button>
     </>
   );
@@ -147,9 +154,9 @@ function ChildSetup() {
       <div className="stack gap-18">
         <label className="field">
           <span className="field-label">
-            Nickname <span className="opt">optional</span>
+            Child's name
           </span>
-          <input className="input" value={p.nickname} onChange={(e) => set({ nickname: e.target.value })} placeholder="e.g. Sam" autoComplete="off" />
+          <input className="input" value={p.nickname} onChange={(e) => set({ nickname: e.target.value })} placeholder="First name" autoComplete="given-name" />
         </label>
         <label className="field">
           <span className="field-label">Age (years)</span>
@@ -268,7 +275,7 @@ function MedSelect() {
         Continue
       </button>
       <button type="button" className="btn-link mt-10" onClick={() => openModal({ kind: "notSure" })}>
-        I'm not sure
+        Not sure? Contact your GP, treating team or anaesthetist
       </button>
     </>
   );
@@ -344,6 +351,7 @@ function Plan() {
           ? "Calculated from " + d.weightKg + " kg and the medicines you selected. Check it against your discharge paperwork."
           : "No weight recorded, so doses cannot be calculated. Go back and enter your child's weight."}
       </p>
+      <AnaesthetistNote className="mt-10 mb-14" />
       <div style={{ fontSize: 11, opacity: 0.55 }} className="mb-18">
         Rule version {RULE_VERSION}
       </div>
@@ -356,7 +364,7 @@ function Plan() {
             <div key={id} className="card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
                 <div style={{ font: "700 16px/1.2 var(--font)" }}>{r.name}</div>
-                <div className={"plan-tag" + (prn ? " prn" : "")}>{r.freq}</div>
+                <div className={"plan-tag" + (prn ? " prn" : "")}>{r.freqLabel}</div>
               </div>
               <div className="big mb-6">{c ? c.doseMg + " mg" : "—"}</div>
               <div className="mb-12" style={{ fontSize: 14, fontWeight: 700, color: c?.doseMl ? "var(--brand-sage)" : "var(--color-accent-700)" }}>
@@ -408,12 +416,12 @@ function Plan() {
 }
 
 function RemindersStep() {
-  const { p, d, set, goTab, notifyPerm, setNotifyPerm } = useApp();
+  const { p, set, goTab, notifyPerm, setNotifyPerm } = useApp();
   const opts: [keyof typeof p.reminders, string][] = [
     ["due", "Remind me when medicines are due"],
     ["notTicked", "Remind me if a medicine has not been ticked off"],
     ["wake", "Set first reminder 1 hour before usual wake-up time"],
-    ["pain", "Daily pain check-in reminder"],
+    ["pain", "Daily pain check-in reminders (morning, afternoon, evening)"],
   ];
   const note =
     notifyPerm === "granted"
@@ -423,12 +431,11 @@ function RemindersStep() {
         : notifyPerm === "unsupported"
           ? "This browser can't show notifications. Add the app to your Home Screen, or rely on the overdue banner on Home."
           : "Your phone will ask permission. Reminders only fire while the app is open or in the background — the overdue banner on Home always works.";
-  const first = d.todays[0];
   return (
     <>
-      <Head kicker="Last step" title="Set reminders" />
+      <Head kicker="Last step" title="Daily pain check-in reminders" />
       <p className="mb-18" style={{ fontSize: 13.5, lineHeight: 1.5 }}>
-        Medicine reminders can help you stay on top of pain relief, especially overnight and early in the morning.
+        We'll remind you to check in on pain in the morning, afternoon and evening — and when medicines are due.
       </p>
       <div className="list">
         {opts.map(([k, label]) => (
@@ -445,10 +452,6 @@ function RemindersStep() {
           </button>
         ))}
       </div>
-      <div className="surface mt-14" style={{ padding: 14, fontSize: 12.5, lineHeight: 1.45 }}>
-        {first ? "First reminder 1 hour before the " + fmt12(first.time) + " dose. " : "Reminder set for 1 hour before usual wake-up time. "}
-        This does not add an extra dose.
-      </div>
       <div className="mt-14" style={{ fontSize: 12.5, lineHeight: 1.45, color: "var(--color-accent-700)", fontWeight: 600 }}>
         {note}
       </div>
@@ -456,6 +459,7 @@ function RemindersStep() {
         type="button"
         className="btn btn-primary mt-14"
         onClick={async () => {
+          set((prev) => ({ reminders: { ...prev.reminders, pain: true } }));
           setNotifyPerm(await requestPermission());
           goTab("home");
         }}

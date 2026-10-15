@@ -2,7 +2,8 @@
  * Clinical rules table.
  *
  * v1.0 was clinically signed off (reported by the app owner, 2026-10-11).
- * v1.1 adds whole-tablet/capsule rounding (solidUnitMg) — NEEDS SIGN-OFF.
+ * v1.1 adds whole-tablet/capsule rounding for paracetamol (500 mg),
+ * ibuprofen (200 mg) and celecoxib (100 mg) — NEEDS SIGN-OFF.
  * Any change to this table needs a new clinical sign-off and must bump
  * RULE_VERSION; the version is recorded against every dose event.
  */
@@ -42,11 +43,14 @@ export interface MedRule {
   postOpDays?: number[];
   daysLabel: string;
   concs: ConcOption[];
+  /** The solid form offered alongside liquid. */
+  solidForm: "tablet" | "capsule";
   /**
-   * Strength of one tablet/capsule in mg. Solid doses are rounded DOWN to a
-   * whole number of these, so they never exceed the weight-based dose.
+   * Strength of one tablet/capsule in mg, or null when solid doses are shown
+   * in mg only. Solid doses are rounded DOWN to a whole number of these, so
+   * they never exceed the weight-based dose.
    */
-  solidUnitMg: number;
+  solidUnitMg: number | null;
   warnings: string[];
 }
 
@@ -70,6 +74,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "48 mg/mL", value: 48 },
       { label: "Not sure", value: null },
     ],
+    solidForm: "tablet",
     solidUnitMg: 500,
     warnings: [
       "Do not give other medicines containing paracetamol unless advised.",
@@ -96,6 +101,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "40 mg/mL", value: 40 },
       { label: "Not sure", value: null },
     ],
+    solidForm: "tablet",
     solidUnitMg: 200,
     warnings: [
       "Only use ibuprofen if it was prescribed or recommended for your child.",
@@ -121,6 +127,7 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "Enter manually", value: null },
       { label: "Not sure", value: null },
     ],
+    solidForm: "capsule",
     solidUnitMg: 100,
     warnings: [
       "Only give celecoxib if it was prescribed.",
@@ -147,7 +154,8 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "1 mg/mL", value: 1 },
       { label: "Not sure", value: null },
     ],
-    solidUnitMg: 0.5,
+    solidForm: "tablet",
+    solidUnitMg: null,
     warnings: [
       "Only give dexamethasone if prescribed.",
       "Give only on the days listed in your discharge instructions.",
@@ -172,7 +180,8 @@ export const RULES: Record<MedId, MedRule> = {
       { label: "5 mg/mL", value: 5 },
       { label: "Not sure", value: null },
     ],
-    solidUnitMg: 5,
+    solidForm: "tablet",
+    solidUnitMg: null,
     warnings: [
       "Oxycodone can cause sleepiness and breathing problems.",
       "Only give oxycodone if it was specifically prescribed.",

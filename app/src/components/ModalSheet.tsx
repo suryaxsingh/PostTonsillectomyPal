@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { doseLabel, parseWeight, tooStrongLabel, unitWord } from "../domain/dose";
+import { doseLabel, parseWeight, unitWord } from "../domain/dose";
 import { safetyCheck } from "../domain/events";
 import { RULES } from "../domain/rules";
 import { fmt12, fmtTime } from "../domain/time";
@@ -103,14 +103,11 @@ function build(m: Modal, app: ReturnType<typeof useApp>): Spec {
   const strong = tooStrongMed ? d.doses[tooStrongMed] : null;
   if (strong?.tooStrong) {
     return {
-      kicker: "Check the medicine form",
+      kicker: "Check the form",
       red: true,
-      title: tooStrongLabel(strong),
-      rows: [
-        ["Medicine", RULES[strong.medId].shortName],
-        ["Child's dose", "less than one " + unitWord(strong, 1)],
-      ],
-      body: `One ${strong.unitMg} mg ${unitWord(strong, 1)} is more than ${child === "Your child" ? "your child" : child} should have in a dose. Ask your pharmacist about the liquid, then change the medicine form in the plan.`,
+      title: unitWord(strong, 1).replace(/^./, (c) => c.toUpperCase()) + " too strong",
+      rows: [["Medicine", RULES[strong.medId].shortName]],
+      body: `The smallest ${RULES[strong.medId].shortName.toLowerCase()} ${unitWord(strong, 1)} is ${strong.unitMg} mg, which is more than ${child === "Your child" ? "your child" : child}'s dose. Switch to the liquid form, or ask your pharmacist.`,
       bodyRed: true,
       actions: [{ label: "Change medicine form", tone: "ink", onTap: () => openModal({ kind: "editMeds" }) }, { label: "Close", tone: "quiet", onTap: closeModal }],
     };
@@ -260,7 +257,7 @@ function build(m: Modal, app: ReturnType<typeof useApp>): Spec {
         body: "Only select medicines that were prescribed. If you are unsure, check your discharge paperwork or contact your GP, treating team or anaesthetist.",
         actions: [
           { label: "Go back", tone: "ink", onTap: closeModal },
-          { label: "Continue without medicines", tone: "outline", onTap: () => (set({ selected: {}, planConfirmed: false }), go("medForm")) },
+          { label: "Continue without medicines", tone: "outline", onTap: () => (set({ selected: {}, planConfirmed: false }), app.setUi({ weightRetype: "" }), go("weightRetype")) },
         ],
       };
     case "reset":

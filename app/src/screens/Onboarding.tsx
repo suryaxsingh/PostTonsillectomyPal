@@ -2,19 +2,13 @@ import { useEffect, useRef } from "react";
 import { AnaesthetistNote, CheckBox, Tick } from "../components/bits";
 import { ChevronLeftIcon } from "../components/Icons";
 import { HOSPITALS, SURGERY_TYPES } from "../domain/content";
-import { parseWeight, tooStrongLabel, unitsLabel, weightLooksImplausible, type FormChoice } from "../domain/dose";
+import { parseWeight, tooStrongDetail, unitsLabel, unitWord, weightLooksImplausible, type FormChoice } from "../domain/dose";
 import { MED_ORDER, RULES, RULE_VERSION, type MedForm, type MedId } from "../domain/rules";
 import { dateKey } from "../domain/time";
 import { requestPermission } from "../state/notifications";
 import { useApp } from "../state/store";
 import { ONBOARDING, type Screen } from "../state/types";
 
-const FORMS: [MedForm, string][] = [
-  ["liquid", "Liquid"],
-  ["tablet", "Tablet"],
-  ["capsule", "Capsule"],
-  ["other", "Not sure"],
-];
 
 /** Back steps through the flow in this order; welcome goes back to the splash. */
 const BACK_ORDER: Screen[] = ["splash", ...ONBOARDING];
@@ -46,7 +40,7 @@ export function Onboarding() {
         {p.screen === "weightConfirm" && <WeightConfirm />}
         {p.screen === "surgery" && <Surgery />}
         {p.screen === "medSelect" && <MedSelect />}
-        {p.screen === "medForm" && <MedFormStep />}
+        {p.screen === "weightRetype" && <WeightRetype />}
         {p.screen === "plan" && <Plan />}
         {p.screen === "reminders" && <RemindersStep />}
       </div>
@@ -138,10 +132,13 @@ function EmergencyWarning() {
 }
 
 function ChildSetup() {
-  const { p, d, set, go, openModal } = useApp();
+  const { p, d, set, setUi, go, openModal } = useApp();
   const ageNum = parseWeight(p.age);
   const warn = weightLooksImplausible(d.weightKg, ageNum);
-  const setWeight = (weight: string) => set((prev) => ({ weight, planConfirmed: prev.weight === weight ? prev.planConfirmed : false }));
+  const setWeight = (weight: string) => {
+    set((prev) => ({ weight, planConfirmed: prev.weight === weight ? prev.planConfirmed : false }));
+    setUi({ weightRetype: "" });
+  };
   const next = () => {
     if (!d.hasWeight) openModal({ kind: "needWeight" });
     else if (warn) openModal({ kind: "checkWeight" });
@@ -246,8 +243,10 @@ function Surgery() {
 }
 
 function MedSelect() {
-  const { p, set, go, openModal } = useApp();
+  const { p, set, setUi, go, openModal } = useApp();
   const toggle = (id: MedId) => set((prev) => ({ selected: { ...prev.selected, [id]: !prev.selected[id] }, planConfirmed: false }));
+  const update = (id: MedId, patch: Partial<FormChoice>) =>
+    set((prev) => ({ forms: { ...prev.forms, [id]: { ...prev.forms[id], ...patch } }, planConfirmed: false }));
   return (
     <>
       <Head kicker="Step 6 of 8" title="Which medicines were prescribed?" />
@@ -255,14 +254,61 @@ function MedSelect() {
       <div className="list">
         {MED_ORDER.map((id) => {
           const on = !!p.selected[id];
+          const r = RULES[id];
+          const f = p.forms[id];
+          const solidLabel = r.solidForm === "capsule" ? "Capsule" : "Tablet";
+          const note =
+            f.form === "liquid"
+              ? f.conc
+                ? "Doses shown in mL (" + f.conc + " mg/mL)."
+                : "Pick the strength on the bottle to see mL doses."
+              : r.solidUnitMg
+                ? "Whole " + r.solidUnitMg + " mg " + r.solidForm + "s only — doses round down."
+                : solidLabel + "s — dose shown in mg.";
           return (
-            <button key={id} type="button" role="checkbox" aria-checked={on} className={"list-row" + (on ? " sel" : "")} onClick={() => toggle(id)}>
-              <Tick on={on} />
-              <span className="stack" style={{ gap: 3 }}>
-                <span style={{ fontSize: 14.5, fontWeight: 700 }}>{RULES[id].name}</span>
-                <span style={{ fontSize: 11.5, opacity: 0.6 }}>{RULES[id].sub}</span>
-              </span>
-            </button>
+            <div key={id} className={"med-pick" + (on ? " sel" : "")}>
+              <button type="button" role="checkbox" aria-checked={on} className="list-row" style={{ borderBottom: 0, background: "transparent" }} onClick={() => toggle(id)}>
+                <Tick on={on} />
+                <span className="stack" style={{ gap: 3 }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>{r.name}</span>
+                  <span style={{ fontSize: 11.5, opacity: 0.6 }}>{r.sub}</span>
+                </span>
+              </button>
+              {on && (
+                <div className="med-form">
+                  <div className="pill-row" role="radiogroup" aria-label={r.shortName + " form"}>
+                    {([["liquid", "Liquid"], [r.solidForm, solidLabel]] as [MedForm, string][]).map(([v, label]) => (
+                      <button key={v} type="button" role="radio" aria-checked={f.form === v} className={"pill" + (f.form === v ? " on" : "")} onClick={() => update(id, { form: v })}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {f.form === "liquid" && r.concs.some((c) => c.value !== null) && (
+                    <div className="stack gap-6">
+                      <span className="mini-caps">Bottle strength</span>
+                      <div className="pill-row">
+                        {r.concs
+                          .filter((c) => c.value !== null)
+                          .map((c) => (
+                            <button
+                              key={c.label}
+                              type="button"
+                              aria-pressed={f.conc === c.value}
+                              className={"pill thin" + (f.conc === c.value ? " on" : "")}
+                              onClick={() => update(id, { conc: c.value })}
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11.5, lineHeight: 1.4, fontWeight: 600, color: f.form === "liquid" && !f.conc ? "var(--color-accent-700)" : "var(--brand-sage)" }}>
+                    {note}
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -271,8 +317,15 @@ function MedSelect() {
           Oxycodone is a strong pain medicine. Only select this if it was specifically prescribed for your child.
         </div>
       )}
-      <button type="button" className="btn btn-ink mt-22" onClick={() => go("medForm")}>
-        Continue
+      <button
+        type="button"
+        className="btn btn-ink mt-22"
+        onClick={() => {
+          setUi({ weightRetype: "" });
+          go("weightRetype");
+        }}
+      >
+        Continue — make my medicine plan
       </button>
       <button type="button" className="btn-link mt-10" onClick={() => openModal({ kind: "notSure" })}>
         Not sure? Contact your GP, treating team or anaesthetist
@@ -281,59 +334,43 @@ function MedSelect() {
   );
 }
 
-function MedFormStep() {
-  const { p, d, set, go } = useApp();
-  const update = (id: MedId, patch: Partial<FormChoice>) =>
-    set((prev) => ({ forms: { ...prev.forms, [id]: { ...prev.forms[id], ...patch } }, planConfirmed: false }));
+/** An independent second entry of the weight, two screens after the first, so a slip like 18 vs 81 is caught. */
+function WeightRetype() {
+  const { d, ui, setUi, go } = useApp();
+  const typed = parseWeight(ui.weightRetype);
+  const match = d.weightKg !== null && typed !== null && Math.abs(d.weightKg - typed) < 0.05;
+  const mismatch = ui.weightRetype.trim() !== "" && !match;
   return (
     <>
-      <Head kicker="Step 7 of 8" title="Medicine form" />
-      <p className="body-sm muted mb-18">We can only show mL doses if the liquid concentration is confirmed.</p>
-      <div className="stack gap-16">
-        {d.selectedIds.length === 0 && <div className="note">No medicines selected. You can add them later from the Medicines tab.</div>}
-        {d.selectedIds.map((id) => {
-          const f = p.forms[id];
-          return (
-            <div key={id} className="surface">
-              <div style={{ font: "700 16px/1.2 var(--font)", marginBottom: 12 }}>{RULES[id].name}</div>
-              <div className="seg mb-12" role="radiogroup" aria-label={RULES[id].shortName + " form"}>
-                {FORMS.map(([v, label]) => (
-                  <button key={v} type="button" role="radio" aria-checked={f.form === v} className={f.form === v ? "on" : ""} onClick={() => update(id, { form: v })}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {f.form === "liquid" && (
-                <>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", marginBottom: 7 }}>Concentration</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {RULES[id].concs.map((c) => {
-                      const on = c.value !== null && f.conc === c.value;
-                      return (
-                        <button key={c.label} type="button" className={"chip" + (on ? " on" : "")} aria-pressed={on} onClick={() => update(id, { conc: c.value })}>
-                          {c.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ marginTop: 10, fontSize: 12, lineHeight: 1.4, fontWeight: 600, color: f.conc ? "var(--brand-sage)" : "var(--color-accent-700)" }}>
-                    {f.conc
-                      ? "mL dose will be shown (" + f.conc + " mg/mL)."
-                      : "Concentration not confirmed — mg dose only. Check the bottle or ask your pharmacist."}
-                  </div>
-                </>
-              )}
-              {(f.form === "tablet" || f.form === "capsule") && (
-                <div style={{ fontSize: 12, lineHeight: 1.4, fontWeight: 600, color: "var(--brand-sage)" }}>
-                  Doses are rounded down to whole {RULES[id].solidUnitMg} mg {f.form}s.
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <button type="button" className="btn btn-primary mt-22" onClick={() => go("plan")}>
-        Calculate medicine plan
+      <Head kicker="Step 7 of 8 · Double-check" title="Just to confirm, please type in the weight again" rule={false} />
+      <p className="mb-20" style={{ fontSize: 13.5, lineHeight: 1.5 }}>
+        Before we build the medicine plan — every dose is worked out from this number. Typing it again catches slips like 18 vs 81.
+      </p>
+      <label className="field">
+        <span className="field-label">Weight again (kg)</span>
+        <input
+          className="input"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          value={ui.weightRetype}
+          onChange={(e) => setUi({ weightRetype: e.target.value })}
+          placeholder="Type the weight"
+          style={{ fontSize: 22, fontWeight: 800 }}
+        />
+      </label>
+      {mismatch && (
+        <div className="note note-red mt-12" style={{ borderLeft: 0, borderRadius: 10, fontWeight: 700 }}>
+          These don't match. Check the weight and type it again, or go back to change the first entry.
+        </div>
+      )}
+      {match && (
+        <div className="mt-12" style={{ background: "#eaf0dd", color: "#3f4a2b", borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.45, fontWeight: 700 }}>
+          Weights match.
+        </div>
+      )}
+      <button type="button" className={"btn mt-24 " + (match ? "btn-primary" : "btn-disabled")} aria-disabled={!match} onClick={() => match && go("plan")}>
+        Build my medicine plan
       </button>
     </>
   );
@@ -375,7 +412,7 @@ function Plan() {
               <div className="big mb-6">{c && !c.tooStrong ? c.doseMg + " mg" : "—"}</div>
               {c && c.units !== null && (
                 <div className="mb-12" style={{ fontSize: 14, fontWeight: 700, color: c.tooStrong ? "var(--color-accent-700)" : "var(--brand-sage)" }}>
-                  {c.tooStrong ? tooStrongLabel(c) : unitsLabel(c) + " (" + c.unitMg + " mg each)"}
+                  {c.tooStrong ? tooStrongDetail(c) : unitsLabel(c) + " — rounded down to whole " + unitWord(c, 2)}
                 </div>
               )}
               {(!c || c.form === "liquid") && (

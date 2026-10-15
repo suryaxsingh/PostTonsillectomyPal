@@ -75,7 +75,7 @@ describe("tablets and capsules", () => {
   it("rounds paracetamol down to whole 500 mg tablets", () => {
     expect(calcDose("paracetamol", 40, tab)).toMatchObject({ doseMg: 500, units: 1, tooStrong: false }); // 600 mg → 1 tablet
     expect(calcDose("paracetamol", 70, tab)).toMatchObject({ doseMg: 1000, units: 2 }); // capped 1000 → 2 tablets
-    expect(doseLabel(calcDose("paracetamol", 70, tab))).toBe("1000 mg · 2 tablets");
+    expect(doseLabel(calcDose("paracetamol", 70, tab))).toBe("1000 mg · 2 tablets of 500 mg");
   });
   it("rounds ibuprofen down to whole 200 mg tablets", () => {
     expect(calcDose("ibuprofen", 25, tab)).toMatchObject({ doseMg: 200, units: 1 }); // 250 → 200
@@ -85,11 +85,16 @@ describe("tablets and capsules", () => {
     const small = calcDose("paracetamol", 18.5, tab)!; // 277 mg < one 500 mg tablet
     expect(small.tooStrong).toBe(true);
     expect(canGive(small)).toBe(false);
-    expect(doseLabel(small)).toBe("500 mg tablets are too strong — use the liquid");
+    expect(doseLabel(small)).toBe("tablet too strong — use liquid");
     expect(canGive(calcDose("paracetamol", 18.5, { form: "liquid", conc: 48 }))).toBe(true);
   });
   it("labels capsules as capsules", () => {
-    expect(doseLabel(calcDose("celecoxib", 30, { form: "capsule", conc: null }))).toBe("100 mg · 1 capsule"); // 120 → 100
+    expect(doseLabel(calcDose("celecoxib", 30, { form: "capsule", conc: null }))).toBe("100 mg · 1 capsule of 100 mg"); // 120 → 100
+  });
+  it("shows dexamethasone and oxycodone tablets in mg, without rounding to tablets", () => {
+    expect(doseLabel(calcDose("oxycodone", 18.5, tab))).toBe("1.8 mg");
+    expect(canGive(calcDose("oxycodone", 18.5, tab))).toBe(true);
+    expect(doseLabel(calcDose("dexamethasone", 23, tab))).toBe("2.3 mg");
   });
 });
 

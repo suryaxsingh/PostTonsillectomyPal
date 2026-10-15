@@ -53,6 +53,7 @@ const DEFAULT_UI: Ui = {
   painSlot: null,
   painNote: null,
   showPainLog: false,
+  weightRetype: "",
 };
 
 export function loadPersisted(): Persisted {
@@ -68,6 +69,8 @@ export function loadPersisted(): Persisted {
       const old = e as PainEntry & { half?: "am" | "pm" };
       return old.slot ? e : { ...e, slot: old.half === "pm" ? "afternoon" : "morning" };
     });
+    // The separate medicine-form step was folded into medicine selection.
+    if ((merged.screen as string) === "medForm") merged.screen = "medSelect";
     // Returning parent lands straight on Home at the current recovery day.
     if (merged.planConfirmed || merged.screen === "app") {
       merged.screen = "app";

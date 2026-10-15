@@ -177,7 +177,7 @@ describe("tablets and capsules", () => {
     const forms = { ...confirmedApp.forms!, paracetamol: { form: "tablet" as const, conc: null }, ibuprofen: { form: "liquid" as const, conc: null } };
     setup({ ...confirmedApp, weight: "40", screen: "plan", planConfirmed: false, forms, selected: { paracetamol: true, ibuprofen: true } });
     expect(screen.getByText("500 mg")).toBeTruthy();
-    expect(screen.getByText("1 tablet (500 mg each)")).toBeTruthy();
+    expect(screen.getByText("1 tablet of 500 mg — rounded down to whole tablets")).toBeTruthy();
     // Only the liquid with no concentration (ibuprofen) gets the warning.
     expect(screen.getAllByText("mL dose not shown — concentration not confirmed")).toHaveLength(1);
   });
@@ -185,7 +185,7 @@ describe("tablets and capsules", () => {
   it("blocks a plan where a tablet is stronger than the child's dose", () => {
     const forms = { ...confirmedApp.forms!, paracetamol: { form: "tablet" as const, conc: null } };
     setup({ ...confirmedApp, screen: "plan", planConfirmed: false, forms, selected: { paracetamol: true } });
-    expect(screen.getByText("500 mg tablets are too strong — use the liquid")).toBeTruthy();
+    expect(screen.getByText("The smallest tablet (500 mg) is more than this child's dose. Use the liquid form, or ask your pharmacist.")).toBeTruthy();
     fireEvent.click(screen.getByRole("checkbox", { name: /I confirm/ }));
     fireEvent.click(screen.getByRole("button", { name: "Use this medicine plan" }));
     expect(screen.getByText("Review medicine plan")).toBeTruthy();
@@ -196,7 +196,34 @@ describe("tablets and capsules", () => {
     setup({ ...confirmedApp, forms });
     fireEvent.click(screen.getByRole("button", { name: /12:00 pm Paracetamol/ }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("500 mg tablets are too strong — use the liquid")).toBeTruthy();
+    expect(within(dialog).getByText("Tablet too strong")).toBeTruthy();
     expect(within(dialog).queryByRole("button", { name: "Yes, given now" })).toBeNull();
+  });
+});
+
+describe("weight re-type step", () => {
+  it("only builds the plan when the second entry matches the first", () => {
+    setup({ ...confirmedApp, screen: "medSelect", planConfirmed: false });
+    fireEvent.click(screen.getByRole("button", { name: "Continue — make my medicine plan" }));
+    const input = screen.getByLabelText("Weight again (kg)") as HTMLInputElement;
+    expect(input.value).toBe("");
+
+    fireEvent.change(input, { target: { value: "81.5" } });
+    expect(screen.getByText(/These don't match/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Build my medicine plan" }));
+    expect(screen.getByText("Just to confirm, please type in the weight again")).toBeTruthy();
+
+    fireEvent.change(input, { target: { value: "18.5" } });
+    expect(screen.getByText("Weights match.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Build my medicine plan" }));
+    expect(screen.getByText("Review medicine plan")).toBeTruthy();
+  });
+
+  it("lets the parent pick liquid or tablet inline when ticking a medicine", () => {
+    setup({ ...confirmedApp, screen: "medSelect", planConfirmed: false, selected: { paracetamol: true } });
+    fireEvent.click(screen.getAllByRole("radio", { name: "Tablet" })[0]);
+    expect(screen.getByText("Whole 500 mg tablets only — doses round down.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Celecoxib/ }));
+    expect(screen.getByRole("radio", { name: "Capsule" })).toBeTruthy();
   });
 });

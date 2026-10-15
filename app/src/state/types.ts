@@ -13,7 +13,7 @@ export type Screen =
   | "weightConfirm"
   | "surgery"
   | "medSelect"
-  | "medForm"
+  | "weightRetype"
   | "plan"
   | "reminders"
   | "app";
@@ -26,7 +26,7 @@ export const ONBOARDING: Screen[] = [
   "weightConfirm",
   "surgery",
   "medSelect",
-  "medForm",
+  "weightRetype",
   "plan",
   "reminders",
 ];
@@ -103,4 +103,6 @@ export interface Ui {
   /** Unsaved note text; null = use the saved note for the slot. */
   painNote: string | null;
   showPainLog: boolean;
+  /** Second, independent entry of the weight (never pre-filled). */
+  weightRetype: string;
 }

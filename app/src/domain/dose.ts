@@ -48,10 +48,13 @@ export function calcDose(medId: MedId, weightKg: number | null, choice?: FormCho
   const r = RULES[medId];
   const weightDoseMg = roundDoseMg(Math.min(weightKg * r.mgPerKg, r.maxSingleDoseMg));
   const form = choice?.form;
-  if (form && SOLID.includes(form)) {
+  if (form && SOLID.includes(form) && r.solidUnitMg) {
     const units = Math.floor(weightDoseMg / r.solidUnitMg + 1e-9);
     const doseMg = Math.round(units * r.solidUnitMg * 10) / 10;
     return { medId, doseMg, doseMl: null, conc: null, form, units, unitMg: r.solidUnitMg, tooStrong: units === 0 };
+  }
+  if (form && SOLID.includes(form)) {
+    return { medId, doseMg: weightDoseMg, doseMl: null, conc: null, form, units: null, unitMg: null, tooStrong: false };
   }
   const conc = form === "liquid" && choice?.conc && choice.conc > 0 ? choice.conc : null;
   const doseMl = conc ? Math.floor((weightDoseMg / conc) * 10 + 1e-9) / 10 : null;
@@ -68,13 +71,18 @@ export function unitWord(d: CalculatedDose, n: number): string {
   return n === 1 ? w : w + "s";
 }
 
-/** e.g. "1 tablet", "2 tablets" (whole units only). */
+/** e.g. "2 tablets of 500 mg" (whole units only). */
 export function unitsLabel(d: CalculatedDose): string {
-  return d.units + " " + unitWord(d, d.units ?? 0);
+  return d.units + " " + unitWord(d, d.units ?? 0) + " of " + d.unitMg + " mg";
 }
 
 export function tooStrongLabel(d: CalculatedDose): string {
-  return d.unitMg + " mg " + unitWord(d, 2) + " are too strong — use the liquid";
+  return unitWord(d, 1) + " too strong — use liquid";
+}
+
+/** Longer explanation for plan review and the blocking modal. */
+export function tooStrongDetail(d: CalculatedDose, who = "this child"): string {
+  return `The smallest ${unitWord(d, 1)} (${d.unitMg} mg) is more than ${who}'s dose. Use the liquid form, or ask your pharmacist.`;
 }
 
 export function doseLabel(d: CalculatedDose | null): string {

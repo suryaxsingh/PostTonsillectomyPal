@@ -100,7 +100,7 @@ After the first time it's opened, **the app works without internet**.
 
 Do this once yourself on a test phone:
 
-- [ ] Go through setup with a made-up child (for example, weight 18.5 kg).
+- [ ] Go through setup with a made-up child (for example, weight 18.5 kg). Near the end, the app asks you to **type the weight again**. It only continues when both entries match.
 - [ ] Check the doses on the **Review medicine plan** screen match what your clinician expects.
 - [ ] On the Home screen, tap a medicine, confirm it, and check it shows as **given**.
 - [ ] Check that the **next** dose of that medicine moved to the right time (for example, paracetamol given at 8 am → next at 2 pm).
@@ -147,10 +147,9 @@ The medicine rules are now version **LOCAL-TONSIL-v1.1**. The version appears in
 | Paracetamol | 500 mg tablet |
 | Ibuprofen | 200 mg tablet |
 | Celecoxib | 100 mg capsule |
-| Dexamethasone | 0.5 mg tablet |
-| Oxycodone | 5 mg tablet |
+| Dexamethasone, oxycodone | Not rounded — tablet doses are shown in mg |
 
-The clinician should confirm these sizes, especially celecoxib, dexamethasone and oxycodone. They can be changed in the code (`src/domain/rules.ts`, the `solidUnitMg` value for each medicine).
+These sizes can be changed in the code (`src/domain/rules.ts`, the `solidUnitMg` value for each medicine).
 
 Keep a copy of each sign-off (who, when, what version) with your clinical governance records.
 
